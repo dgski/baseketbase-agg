@@ -72,6 +72,7 @@ body {
     display: inline-block;
     width: 700px;
     /*margin-top: 65px;*/
+    padding-top: 35px;
 
 }
 
@@ -204,7 +205,6 @@ body {
     border-bottom-color: rgba(133, 140, 172, 0.171);
     border-bottom-width: 1px;
     border-bottom-style: solid;*/
-    padding-bottom: 35px;
     padding-top: 35px;
 
 }
@@ -342,7 +342,7 @@ body {
 }
 
 .voters {
-    padding-right: 5px;
+    padding-right: 8px;
     color: rgb(133, 140, 172);
     text-align: left;
     font-size: 12px;
