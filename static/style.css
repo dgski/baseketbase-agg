@@ -96,6 +96,13 @@ body {
 
 }
 
+.item-link {
+    display: block;
+    text-decoration: none;
+    color: black;
+    width: 100%;
+}
+
 .item:hover {
     background-color:aliceblue;
 }
@@ -164,7 +171,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 60px;
+    width: 65px;
 
     /*
     border-color: rgb(133, 140, 172);
