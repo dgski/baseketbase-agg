@@ -50,7 +50,7 @@
   `(div ((class "item"))
         (div ((class "heat-level"))
              (div ((class "heat-level-cont"))
-                  (div ((class "voters")) "▼▲") ,(number->string (- (item-pos x) (item-neg x)))))
+                  (div ((class "voters")) (span ((class "voter")) "▼") (span ((class "voter")) "▲")) ,(number->string (- (item-pos x) (item-neg x)))))
         (a ((class "item-link")(href ,(item-url x))) (div ((class "content"))
              (div ((class "title")) ,(item-title x))
              (div ((class "url-sample")) ,(item-url x))))

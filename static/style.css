@@ -348,6 +348,9 @@ body {
     font-size: 12px;
 }
 
+.voter:hover {
+    color: black;
+}
 
 .info {
     background-color: aliceblue;
