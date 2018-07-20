@@ -1,31 +1,9 @@
 #lang racket
 
-(require db)
+(require "model.rkt")
 
 (define our_db
   (sqlite3-connect #:database "test-r.db" #:mode 'create))
-
-;Create table col string from list of pairs
-(define create-col
-  (lambda (lat)
-    (cond
-      ((null? lat) "")
-      (else
-        (string-append (car (car lat)) 
-                       " " 
-                       (car (cdr (car lat))) 
-                       ((lambda (lat) (if (null? lat) "" ", ")) (cdr lat)) 
-                       (create-col (cdr lat)))))))
-
-;Create a table with the following columns
-(define create-table
-  (lambda (name lat)
-    (string-append "CREATE TABLE " name " (" (create-col lat) ");")))
-
-;Add post
-(define addpost
-  (lambda (ourdb id uid datetime title ups downs comments url type)
-    (query-exec our_db "INSERT INTO posts (id, uid, datetime, title, ups, downs, comments, url, type) VALUES (?,?,?,?,?,?,?,?,?);" id uid datetime title ups downs comments url type)))
 
 
 ;Create Users table
@@ -34,34 +12,44 @@
                                            ("username" "text")
                                            ("email" "text")))) "user table already exists")
 
+; (struct item (id pos neg title url content numcomm comments)) 
 ;Create Posts table
 (if (not (table-exists? our_db "posts"))
-    (query-exec our_db (create-table "posts" '(("id" "number") 
-                                      ("uid" "number") 
-                                      ("datetime" "datetime")
+    (query-exec our_db (create-table "posts"
+                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT") 
+                                      ("pos" "number") 
+                                      ("neg" "number")
                                       ("title" "text")
-                                      ("ups" "number")
-                                      ("downs" "number")
-                                      ("comments" "number")
                                       ("url" "text")
-                                      ("type" "text")))) "posts table already exists")
+                                      ("content" "text")
+                                      ("numcomm" "number")
+                                      ))) "posts table already exists")
+
+;(struct comment (id username body datetime replies))
+; Create Comments table
+(if (not (table-exists? our_db "comments"))
+    (query-exec our_db (create-table "comments"
+                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT") 
+                                      ("username" "text") 
+                                      ("body" "text")
+                                      ("title" "text")
+                                      ("datetime" "datetime")
+                                      ("replyto" "number")
+                                      ))) "comments table already exists")
 
 
+(define sample-posts (list (item 2 999 234 "Incredible Sights" "Bill Thompson" "" 671
+                                  (list (comment 0 "gonzalez_2" "This is a sample comment for this article. I will add a little more words to it so I can see how it looks when it's content wraps around... Hopefully everything goes well!" "9 hours ago" (list reply-sample-comment))))
+                            (item 1 66 0 "Castles" "www.discover.com" "" 9 '(100 20030)) 
+                            (item 3 341 123 "Nothing" "Bill Hulio" "" 900 '(100 20030))
+                            (item 4 345 123 "Apple's New iPhone is Triangular" "http://www.apple.com" "" 785 '(100 20030))
+                            (item 5 859 320 "Some People still don't know this fact" "http://www.wikipedia.org" "" 230 '(0203 12344))
+                            (item 6 233 122 "The Artic Ocean at Sundown" "http://nationalgeographic.com" "" 237 '(0203 12344))))
 
-(addpost our_db 1 1 1222 "Apple's New iPhone is Triangular" 300 55 785 "apple.com" "link")
-(addpost our_db 2 1 1222 "Some People still don't know this fact" 364 10 230 "wikipedia" "link")
 
+(map (lambda (x) (add-post-db our_db x)) sample-posts)
 
-
+#|
 (query-exec our_db "INSERT INTO users (id, username, email) VALUES (?,?,?);" 1 "David" "gorski.dave@gmail.com")
 (query-exec our_db "INSERT INTO users (id, username, email) VALUES (?,?,?);" 2 "Bob" "bob@gmail.com")
-
-(foldl (lambda (x xs)
-                  (string-append xs
-                                 "<p>"
-                                 (number->string (vector-ref x 0)) ". " (vector-ref x 1) " - " (vector-ref x 2)
-                                 "</p>"
-                                 )) "" (query-rows our_db "SELECT * FROM users"))
-
-
-
+|#

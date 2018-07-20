@@ -5,37 +5,16 @@
          racket/port)
 
 (require "views.rkt")
-
-; MODEL DEFINITIONS
-
-(struct item (id pos neg title url content numcomm comments)) 
-(struct basket (items) #:mutable)
-(struct comment (id username body datetime replies))
-
-(define reply-sample-comment
-  (comment 0 "richardson_11" "Hey, I think your reply is cool, but I have an even more cool experience to share. My comment is the best, because, quite frankly, I am the best!" "4 hours ago" '()))
-
-(define ITEMS (basket (list (item 2 999 234 "Incredible Sights" "Bill Thompson" "" 671
-                                  (list (comment 0 "gonzalez_2" "This is a sample comment for this article. I will add a little more words to it so I can see how it looks when it's content wraps around... Hopefully everything goes well!" "9 hours ago" (list reply-sample-comment))))
-                            (item 1 66 0 "Castles" "www.discover.com" "" 9 '(100 20030)) 
-                            (item 3 341 123 "Nothing" "Bill Hulio" "" 900 '(100 20030))
-                            (item 4 345 123 "Apple's New iPhone is Triangular" "http://www.apple.com" "" 785 '(100 20030))
-                            (item 5 859 320 "Some People still don't know this fact" "http://www.wikipedia.org" "" 230 '(0203 12344))
-                            (item 6 233 122 "The Artic Ocean at Sundown" "http://nationalgeographic.com" "" 237 '(0203 12344)))))
-
-(define (parse-item b)
-  (item 0 0 0 (extract-binding/single 'title b)
-              (extract-binding/single 'url b)
-              (extract-binding/single 'title b)
-              0
-              '()))
-
-(define (basket-insert-item! b i)
-  (set-basket-items! b (cons i (basket-items b))))
+(require "model.rkt")
 
 
-;RENDER FUNCTIONS
+; # CREATE DATABASE CONNECTION
+(define db
+  (sqlite3-connect #:database "test-r.db" #:mode 'create))
 
+; # RENDER FUNCTIONS
+
+; render website heading
 (define (render-heading sorter?)
   `(div ((class "heading"))
        (div ((class "heading-holder"))
@@ -52,18 +31,21 @@
                            (a ((class "heading-link") (href "/account")) "account")
                            (a ((class "heading-link") (href "/signout")) "sign out")))))))
 
+; render website footer
 (define (render-footer)
   `(div ((class "footer"))
              (div ((class "controls"))
                   (a ((class "control-link") (href "prev")) "< prev")
                   (a ((class "control-link") (href "next")) "next >"))))
 
+; redner website sorter
 (define (render-sorter)
   '(select (option ((value "hot")) "hot")
            (option ((value "new")) "new")
            (option ((value "top")) "top")))
 
-
+; consume item x and return X-expr representing data
+; item -> X-expr
 (define (render-item x)
   `(div ((class "item"))
         (div ((class "heat-level"))
@@ -78,13 +60,17 @@
                       (href ,(string-append  "/post/" (number->string (item-id x)))))
                      ,(string-append (number->string (item-numcomm x)) " comments"))))))
 
-
+; consume a list of items and return X-expr representing it
+; list of item -> X-expr
 (define (render-items)
+  (get-posts db)
   `(div ((class "items"))
         ;,@(map render-item (take ITEMS 3))
-        ,@(map render-item (basket-items ITEMS))
+        ,@(map render-item (get-posts db))
         ,(render-footer)))
 
+; consume a title and an X-expr and return a X-expr for a general page
+; string X-expr -> X-expr
 (define (render-gnr-page title content)
   (response/xexpr
    #:preamble #"<!doctype html>"
@@ -97,7 +83,8 @@
       ,content))))
 
 
-;Render a comment and all of it's children
+; consume a comment and a depth and return a X-expr representing it and all of it's children
+; comment number -> X-expr
 (define (render-comment x depth)
   `(div ((class ,(string-append "comment" (if (null? (comment-replies x)) "" " comment-parent"))))
         (div ((class "comment-aligner"))
@@ -113,24 +100,29 @@
   )
 
 
-;Render the comments
+; consume a list of comments and return a X-expr representing it
 (define (render-comments comms)
   `(div ((class "comment-box"))
         ,@(map (lambda (x) (render-comment x 0)) comms)))
 
-;RECIEVING UPDATES
+
+
+; # RECIEVING UPDATES
 (define (submit-post r)
-  (basket-insert-item! ITEMS (parse-item (request-bindings r)))
+  ; Insert post into database
+  (add-post-db db (parse-item (request-bindings r)))
   (redirect-to "/"))
 
 
+; # PAGE RESPONSE FUNCTIONS
 
-
-; PAGE RESPONSE FUNCTIONS
-
+; consume request and return the front page
+; request -> X-expr
 (define (front-page r)
   (render-gnr-page "basketbase - Front Page" (render-items)))
 
+; consume request and return the about page
+; request -> X-expr
 (define (about-page r)
   (render-gnr-page
    "About"
@@ -141,11 +133,12 @@
          (br)(br)
          "Designed and developed by David Gorski."))))
 
-
+; consume request and return the account page
+; request -> X-expr
 (define (account-page r)
   (render-gnr-page
    (string-append "id" "'s Profile")
-   `(div ((class "items"))
+   `(div ((class "items") (style "margin-bottom: 70px;"))
          (div ((style "padding-top: 25px; text-align: left"))
               (h3 (string-append "Account Information for '" "id" "'"))
               (br)
@@ -170,15 +163,18 @@
               (button ((class "our-button") (style "background-color: brown")) "delete account")))))
               
    
-   
+; consume request and return the post being requested along with comments
+; request -> X-expr
 (define (post-page r id)
   (render-gnr-page
    "Post Page"
    `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-         ,(render-item (car (basket-items ITEMS)))
+         ,(render-item (get-post db (string->number id)))
          ,(render-comments (item-comments (car (basket-items ITEMS))))
          )))
 
+; consume request and return the submit page
+; request -> X-expr
 (define (submit-page r)
   (render-gnr-page
    "basketbase - Submit Page"
@@ -200,18 +196,26 @@
                     (button ((class "our-button")) "submit"))))))
      
 
-;STATIC FILE SERVING
+; # STATIC FILE SERVING
 
+; consume request and filename and send that file back to use
+; request -> X-expr
+; Future : make sure that MIME type is correct!!!!!
 (define (serve-asset r f)
  (response 200 #"OK" 0 #"text/css" empty (lambda (op)
 (with-input-from-file (string-append "static/" f) (lambda () (copy-port
 (current-input-port) op))))))
 
 
-; REQUEST DISPATCHING
+; # REQUEST DISPATCHING
+
+; Consume request and return the right thing
+; request -> X-expr
 (define (start request)
+  ; session verification will go here
   (dispatch request))
 
+; Request dispatching Table
 (define-values (dispatch url)
   (dispatch-rules
    [("") front-page]
@@ -223,9 +227,11 @@
    [("static" (string-arg)) serve-asset]
    [else (lambda (x) (response/xexpr "WRONG TURN, BRO"))]))
 
+
+; Start the server
 (serve/servlet start
                #:extra-files-paths (list (build-path (current-directory) "static"))  ; directory for static files
                #:launch-browser? #f
                #:servlet-path "/"
                #:servlet-regexp #rx""
-               #:port 5000)
+               #:port 8080)
