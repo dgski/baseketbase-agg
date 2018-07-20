@@ -50,15 +50,15 @@
   `(div ((class "item"))
         (div ((class "heat-level"))
              (div ((class "heat-level-cont"))
-                  (div ((class "voters")) (span ((class "voter")) "▼") (span ((class "voter")) "▲")) ,(number->string (- (item-pos x) (item-neg x)))))
-        (a ((class "item-link")(href ,(item-url x))) (div ((class "content"))
-             (div ((class "title")) ,(item-title x))
-             (div ((class "url-sample")) ,(item-url x))))
+                  (div ((class "voters")) (span ((class "voter")) "▼") (span ((class "voter")) "▲")) ,(number->string (- (post-pos x) (post-neg x)))))
+        (a ((class "item-link")(href ,(post-url x))) (div ((class "content"))
+             (div ((class "title")) ,(post-title x))
+             (div ((class "url-sample")) ,(post-url x))))
         (div ((class "comments"))
              (div ((class "comment-container"))
                   (a ((class "comment-link")
-                      (href ,(string-append  "/post/" (number->string (item-id x)))))
-                     ,(string-append (number->string (item-numcomm x)) " comments"))))))
+                      (href ,(string-append  "/post/" (number->string (post-id x)))))
+                     ,(string-append (number->string (post-numcom x)) " comments"))))))
 
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
@@ -110,7 +110,7 @@
 ; # RECIEVING UPDATES
 (define (submit-post r)
   ; Insert post into database
-  (add-post-db db (parse-item (request-bindings r)))
+  (add-post-db db (parse-post(request-bindings r)))
   (redirect-to "/"))
 
 
@@ -169,8 +169,8 @@
   (render-gnr-page
    "Post Page"
    `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-         ,(render-item (get-post db (string->number id)))
-         ,(render-comments (item-comments (car (basket-items ITEMS))))
+         ,(render-item (pid->post db (string->number id)))
+         ; comments will go here
          )))
 
 ; consume request and return the submit page

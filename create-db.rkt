@@ -8,48 +8,80 @@
 
 ;Create Users table
 (if (not (table-exists? our_db "users"))
- (query-exec our_db (create-table "users" '(("id" "number")
-                                           ("username" "text")
-                                           ("email" "text")))) "user table already exists")
+ (query-exec our_db (create-table "users" '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                            ("username" "TEXT")
+                                            ("email" "TEXT")
+                                            ("profile" "TEXT")
+                                            ("passhash" "TEXT")))) "users table already exists")
 
-; (struct item (id pos neg title url content numcomm comments)) 
 ;Create Posts table
 (if (not (table-exists? our_db "posts"))
     (query-exec our_db (create-table "posts"
-                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT") 
-                                      ("pos" "number") 
-                                      ("neg" "number")
-                                      ("title" "text")
-                                      ("url" "text")
-                                      ("content" "text")
-                                      ("numcomm" "number")
-                                      ))) "posts table already exists")
+                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                       ("uid" "INTEGER")
+                                       ("pos" "INTEGER")
+                                       ("neg" "INTEGER")
+                                       ("score" "INTEGER")
+                                       ("datetime" "DATETIME")
+                                       ("title" "TEXT")
+                                       ("url" "TEXT")
+                                       ("body" "TEXT")
+                                       ("numcom" "INTEGER")
+                                       ("section" "TEXT")
+                                       ))) "posts table already exists")
 
-;(struct comment (id username body datetime replies))
 ; Create Comments table
 (if (not (table-exists? our_db "comments"))
     (query-exec our_db (create-table "comments"
                                      '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT") 
-                                      ("username" "text") 
-                                      ("body" "text")
-                                      ("title" "text")
-                                      ("datetime" "datetime")
-                                      ("replyto" "number")
-                                      ))) "comments table already exists")
+                                       ("uid" "INTEGER")
+                                       ("pid" "INTEGER")
+                                       ("pos" "INTEGER")
+                                       ("neg" "INTEGER")
+                                       ("score" "INTEGER")
+                                       ("datetime" "DATETIME")
+                                       ("body" "TEXT")
+                                       ("reply_to" "INTEGER")))) "comments table already exists")
+
+; Create sessions table
+(if (not (table-exists? our_db "sessions"))
+    (query-exec our_db (create-table "sessions"
+                                     '(("id" "TEXT")
+                                       ("uid" "INTEGER")
+                                       ("ip" "TEXT")
+                                       ("useragent" "TEXT")
+                                       ("expiry" "DATETIME")))) "sessions table already exists")
+
+; Create messages table
+(if (not (table-exists? our_db "messages"))
+    (query-exec our_db (create-table "messages"
+                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT"
+                                       ("uid_to" "INTEGER")
+                                       ("uid_from" "INTEGER")
+                                       ("body" "TEXT")
+                                       ("datetime" "DATETIME")
+                                       ("seen" "INTEGER")
+                                       ("reply_to" "INTEGER"))))) "messages table already exists")
+
+; Create votes table
+(if (not (table-exists? our_db "votes"))
+    (query-exec our_db (create-table "votes"
+                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                       ("uid" "INTEGER")
+                                       ("pid" "INTEGER")
+                                       ("cid" "INTEGER")
+                                       ("type" "INTEGER")
+                                       ("direction" "INTEGER")))) "votes table already exists")
 
 
-(define sample-posts (list (item 2 999 234 "Incredible Sights" "Bill Thompson" "" 671
-                                  (list (comment 0 "gonzalez_2" "This is a sample comment for this article. I will add a little more words to it so I can see how it looks when it's content wraps around... Hopefully everything goes well!" "9 hours ago" (list reply-sample-comment))))
-                            (item 1 66 0 "Castles" "www.discover.com" "" 9 '(100 20030)) 
-                            (item 3 341 123 "Nothing" "Bill Hulio" "" 900 '(100 20030))
-                            (item 4 345 123 "Apple's New iPhone is Triangular" "http://www.apple.com" "" 785 '(100 20030))
-                            (item 5 859 320 "Some People still don't know this fact" "http://www.wikipedia.org" "" 230 '(0203 12344))
-                            (item 6 233 122 "The Artic Ocean at Sundown" "http://nationalgeographic.com" "" 237 '(0203 12344))))
 
+; Add Sample Posts Into db
+; (struct post (id uid pos neg score datetime title url body numcomm section))
+(define sample-posts (list (post 0 0 999 234 765 0 "Incredible Sights" "Bill Thompson" "" 671 "front")))
 
 (map (lambda (x) (add-post-db our_db x)) sample-posts)
 
-#|
-(query-exec our_db "INSERT INTO users (id, username, email) VALUES (?,?,?);" 1 "David" "gorski.dave@gmail.com")
-(query-exec our_db "INSERT INTO users (id, username, email) VALUES (?,?,?);" 2 "Bob" "bob@gmail.com")
-|#
+
+
+(query-exec our_db "INSERT INTO users (username, email) VALUES (?,?);" "David" "gorski.dave@gmail.com")
+(query-exec our_db "INSERT INTO users (username, email) VALUES (?,?);" "Bob" "bob@gmail.com")

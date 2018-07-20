@@ -24,69 +24,78 @@
   (lambda (name lat)
     (string-append "CREATE TABLE " name " (" (create-col lat) ");")))
 
-;Add post
-(define add-post
-  (lambda (db id pos neg title url content numcomm)
-    (query-exec db "INSERT INTO posts (id, pos, neg, title, url, content, numcomm) VALUES (?,?,?,?,?,?,?);" id pos neg title url content numcomm)))
+
+; POSTS
+
+; Post convenience struct
+(struct post (id uid pos neg score datetime title url body numcom section))
+
+; Parse post from request bindings
+(define (parse-post b)
+  (post 0
+        0
+        0
+        0
+        0
+        0
+        (extract-binding/single 'title b)
+        (extract-binding/single 'url b)
+        (extract-binding/single 'title b)
+              0
+              "front"))
 
 ;Add post to db
 (define (add-post-db db x)
-  (query-exec db "INSERT INTO posts (pos, neg, title, url, content, numcomm) VALUES (?,?,?,?,?,?);"            
-              (item-pos x)
-              (item-neg x)
-              (item-title x)
-              (item-url x)
-              (item-content x)
-              (item-numcomm x)))
+  (query-exec db "INSERT INTO posts (uid, pos, neg, score, datetime, title, url, body, numcom, section) VALUES (?,?,?,?,?,?,?,?,?,?);"            
+              (post-uid x)
+              (post-pos x)
+              (post-neg x)
+              (post-score x)
+              (post-datetime x)
+              (post-title x)
+              (post-url x)
+              (post-body x)
+              (post-numcom x)
+              (post-section x)))
 
-
+; consumes db result vector and returns post
 (define (db->post x)
-  (item (vector-ref x 0)
+  (post (vector-ref x 0)
         (vector-ref x 1)
         (vector-ref x 2)
         (vector-ref x 3)
         (vector-ref x 4)
         (vector-ref x 5)
         (vector-ref x 6)
-        '()))
+        (vector-ref x 7)
+        (vector-ref x 8)
+        (vector-ref x 9)
+        (vector-ref x 10)))
 
 
+; Get all posts from db
 (define (get-posts db)
   (map db->post (query-rows db "SELECT * FROM posts")))
 
+; Get post from db with id
+(define (pid->post db id)
+  (db->post (query-row db "SELECT * FROM posts WHERE id = ?" id)))
 
-(define (get-post db id)
-  (db->post (list-ref (query-rows db "SELECT * FROM posts WHERE id = ?" id) 0)))
+; Get posts from db with uid
+(define (uid->posts db uid)
+  (db->post (query-rows db "SELECT * FROM posts WHERE uid = ?" uid) 0))
 
+
+; USERS
+
+(define (uid->string db x)
+  (vector-ref (query-row db "SELECT * FROM users WHERE id = ?" x) 1))
 
 
 
 ; # MODEL DEFINITIONS
-(struct item (id pos neg title url content numcomm comments)) 
 (struct basket (items) #:mutable)
 (struct comment (id username body datetime replies))
-
-
-(define reply-sample-comment
-  (comment 0 "richardson_11" "Hey, I think your reply is cool, but I have an even more cool experience to share. My comment is the best, because, quite frankly, I am the best!" "4 hours ago" '()))
-
-(define ITEMS (basket (list (item 2 999 234 "Incredible Sights" "Bill Thompson" "" 671
-                                  (list (comment 0 "gonzalez_2" "This is a sample comment for this article. I will add a little more words to it so I can see how it looks when it's content wraps around... Hopefully everything goes well!" "9 hours ago" (list reply-sample-comment))))
-                            (item 1 66 0 "Castles" "www.discover.com" "" 9 '(100 20030)) 
-                            (item 3 341 123 "Nothing" "Bill Hulio" "" 900 '(100 20030))
-                            (item 4 345 123 "Apple's New iPhone is Triangular" "http://www.apple.com" "" 785 '(100 20030))
-                            (item 5 859 320 "Some People still don't know this fact" "http://www.wikipedia.org" "" 230 '(0203 12344))
-                            (item 6 233 122 "The Artic Ocean at Sundown" "http://nationalgeographic.com" "" 237 '(0203 12344)))))
-
-(define (parse-item b)
-  (item 0 0 0 (extract-binding/single 'title b)
-              (extract-binding/single 'url b)
-              (extract-binding/single 'title b)
-              0
-              '()))
-
-(define (basket-insert-item! b i)
-  (set-basket-items! b (cons i (basket-items b))))
 
 
 
