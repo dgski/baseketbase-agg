@@ -63,11 +63,24 @@
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
 (define (render-items)
-  (get-posts db)
-  `(div ((class "items"))
-        ;,@(map render-item (take ITEMS 3))
-        ,@(map render-item (get-posts db))
-        ,(render-footer)))
+  (let ([items (get-posts db)])
+    `(div ((class "items"))
+        ,(render-top-items (take items 3))
+        ,@(map render-item (cdddr items))
+        ,(render-footer))))
+
+; consume a list of three items and return an X-exp representing it
+; list of item -> X-expr
+(define (render-top-items lat)
+  `(div ((class "top-items"))
+        (div ((class "top-item"))
+             (div ((class "img-crop") (style "height: 252px;")))
+             ,(render-item (list-ref lat 0)))
+        (div ((class "second-items"))
+             (div ((class "img-crop") (style "height: 104px")))
+             ,(render-item (list-ref lat 1))
+             (div ((class "img-crop") (style "height: 104px")))
+             ,(render-item (list-ref lat 2)))))
 
 ; consume a title and an X-expr and return a X-expr for a general page
 ; string X-expr -> X-expr
@@ -114,7 +127,7 @@
 ; # RECIEVING UPDATES
 (define (submit-post r)
   ; Insert post into database
-  (post->db db (parse-post(request-bindings r)))
+  (post->db db (parse-post (request-bindings r)))
   (redirect-to "/"))
 
 

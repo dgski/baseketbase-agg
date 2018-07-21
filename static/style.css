@@ -17,7 +17,7 @@ body {
 
 .heading-holder {
     
-    width: 700px;
+    width: 800px;
     text-align: left;
     display: inline-block;
     flex: 1 auto;
@@ -70,9 +70,8 @@ body {
 .items {
     font-size: 14px;
     display: inline-block;
-    width: 700px;
+    width: 800px;
     /*margin-top: 65px;*/
-    padding-top: 35px;
 
 }
 
@@ -139,7 +138,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: right;
-
     /*
     border-color: rgb(133, 140, 172);
     border-style: solid;
@@ -153,7 +151,7 @@ body {
 
     padding-right: 5px;
 
-    width: 120px;
+    width: 150px;
 
 }
 
@@ -172,7 +170,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 65px;
+    width: 100px;
 
     /*
     border-color: rgb(133, 140, 172);
@@ -206,12 +204,13 @@ body {
     border-bottom-width: 1px;
     border-bottom-style: solid;*/
     padding-top: 35px;
+    padding-bottom: 35px;
 
 }
 
 .top-item {
     flex: 1 auto;
-    width: 65%;
+    width: calc(50% + 44px);
     padding: 44px;
     padding-left: 0px;
     padding-top: 0px;
@@ -227,7 +226,7 @@ body {
 
 .second-items {
     flex: 1 auto;
-    width: 35%;
+    width: 40%;
     background-color: white;
 }
 
@@ -237,6 +236,9 @@ body {
 
 .img-crop {
     overflow: hidden;
+    background-color: rgb(21, 34, 75);
+    /*background: linear-gradient(black,navy);*/
+
 }
 
 .text-item {

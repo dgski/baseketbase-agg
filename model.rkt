@@ -37,7 +37,7 @@
         0
         0
         0
-        0
+        "GETDATE()"
         (extract-binding/single 'title b)
         (extract-binding/single 'url b)
         (extract-binding/single 'title b)
