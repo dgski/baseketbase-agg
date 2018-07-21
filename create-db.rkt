@@ -41,12 +41,12 @@
                                        ("score" "INTEGER")
                                        ("datetime" "DATETIME")
                                        ("body" "TEXT")
-                                       ("reply_to" "INTEGER")))) "comments table already exists")
+                                       ("replyto" "INTEGER")))) "comments table already exists")
 
 ; Create sessions table
 (if (not (table-exists? our_db "sessions"))
     (query-exec our_db (create-table "sessions"
-                                     '(("id" "TEXT")
+                                     '(("id" "TEXT PRIMARY KEY")
                                        ("uid" "INTEGER")
                                        ("ip" "TEXT")
                                        ("useragent" "TEXT")
@@ -61,7 +61,7 @@
                                        ("body" "TEXT")
                                        ("datetime" "DATETIME")
                                        ("seen" "INTEGER")
-                                       ("reply_to" "INTEGER"))))) "messages table already exists")
+                                       ("replyto" "INTEGER"))))) "messages table already exists")
 
 ; Create votes table
 (if (not (table-exists? our_db "votes"))
@@ -77,11 +77,23 @@
 
 ; Add Sample Posts Into db
 ; (struct post (id uid pos neg score datetime title url body numcomm section))
-(define sample-posts (list (post 0 0 999 234 765 0 "Incredible Sights" "Bill Thompson" "" 671 "front")))
+(define sample-posts (list (post 0 0 999 234 765 0 "Incredible Sights" "Bill Thompson" "" 671 "front")
+                           (post 0 0 700 234 66 0 "Castles" "http://discover.com" "" 9 "front")
+                           (post 0 0 499 234 66 0 "Nothing" "Bill Hulio" "" 900 "front")
+                           (post 0 0 234 23 66 0 "Apple's New iPhone is Triangular" "http://apple.com" "" 785 "front")
+                           (post 0 0 580 234 66 0 "Some People still don't know this fact" "http://wikipedia.org" "" 230 "front")
+                           (post 0 0 876 0 876 0 "The Artic Ocean at Sundown" "http://nationalgeographic.com" "" 1237 "front")))
 
-(map (lambda (x) (add-post-db our_db x)) sample-posts)
+(map (lambda (x) (post->db our_db x)) sample-posts)
+
+; Add Sample comments
+(comment->db our_db (comment 1 2 1 3 4 5 "2018-03-10" "This is a top level comment" -1))
+(comment->db our_db (comment 1 2 1 3 4 5 "2018-07-10" "This is a reply" 1))
+(comment->db our_db (comment 1 2 1 3 4 5 "2018-10-10" "This is another reply" 1))
+(comment->db our_db (comment 1 2 1 3 4 5 "2018-22-10" "Third level down." 2))
 
 
 
-(query-exec our_db "INSERT INTO users (username, email) VALUES (?,?);" "David" "gorski.dave@gmail.com")
-(query-exec our_db "INSERT INTO users (username, email) VALUES (?,?);" "Bob" "bob@gmail.com")
+
+(user->db our_db (user 0 "jose_gonzalez" "jose@gonzalez.com" "" "xxxxx"))
+(user->db our_db (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx"))

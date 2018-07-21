@@ -86,18 +86,22 @@
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
 ; comment number -> X-expr
 (define (render-comment x depth)
-  `(div ((class ,(string-append "comment" (if (null? (comment-replies x)) "" " comment-parent"))))
+  (let ([current (car x)]
+        [replies (cadr x)])
+  `(div ((class"comment" ))
         (div ((class "comment-aligner"))
              (div ((class "comment-content"))
-                  (div ((class "comment-username")) (span ((class "voters")) "▼▲") ,(comment-username x))
-                  (div ((class "comment-body")) ,(comment-body x)))
+                  (div ((class "comment-username")) (span ((class "voters"))
+                                                          (span ((class "voter")) "▼")
+                                                          (span ((class "voter")) "▲"))
+                       ,(uid->db->string db (comment-uid current)))
+                  (div ((class "comment-body")) ,(comment-body current)))
              (div ((class "comment-datetime"))
-                  (div ((class "datetime-container")) ,(comment-datetime x))))
-          ,(if [> 4 depth]`(div ((class "comment-replies"))
-             ,@(map (lambda (x) (render-comment x (+ 1 depth))) (comment-replies x)))""))
-  ;(if [<= 4 depth]
-  ;    (map (lambda (x) (render-comment x (+ 1 depth))) (comment-replies x)) ""))
-  )
+                  (div ((class "datetime-container")) ,(comment-datetime current))))
+        
+         ,(if [> 4 depth]`(div ((class "comment-replies"))
+         ,@(map (lambda (x) (render-comment x (+ 1 depth))) replies))""))))
+ ; )
 
 
 ; consume a list of comments and return a X-expr representing it
@@ -110,7 +114,7 @@
 ; # RECIEVING UPDATES
 (define (submit-post r)
   ; Insert post into database
-  (add-post-db db (parse-post(request-bindings r)))
+  (post->db db (parse-post(request-bindings r)))
   (redirect-to "/"))
 
 
@@ -169,8 +173,8 @@
   (render-gnr-page
    "Post Page"
    `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-         ,(render-item (pid->post db (string->number id)))
-         ; comments will go here
+         ,(render-item (pid->db->post db (string->number id)))
+         ,(render-comments (pid->db->comms db (string->number id)))
          )))
 
 ; consume request and return the submit page
