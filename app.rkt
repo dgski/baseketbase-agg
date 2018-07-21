@@ -2,7 +2,8 @@
 
 (require web-server/servlet
          web-server/servlet-env
-         racket/port)
+         racket/port
+         web-server/http/id-cookie)
 
 (require "views.rkt")
 (require "model.rkt")
@@ -93,7 +94,9 @@
       (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
      (body        
       ,(render-heading #f)     
-      ,content))))
+      ,content))
+   
+   ))
 
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
@@ -114,8 +117,6 @@
         
          ,(if [> 4 depth]`(div ((class "comment-replies"))
          ,@(map (lambda (x) (render-comment x (+ 1 depth))) replies))""))))
- ; )
-
 
 ; consume a list of comments and return a X-expr representing it
 (define (render-comments comms)
@@ -211,7 +212,22 @@
                                (name "body")))
                     (br)
                     (button ((class "our-button")) "submit"))))))
-     
+
+
+(define (login-page r)
+  (render-gnr-page
+   "Login"
+   '(div ((class "items"))
+         (div ((class "top-items"))
+              (div ((class "top-item login") (style "width: 85px"))
+                   (form ((action "do-login"))
+                         (input ((class "our-input") (type "text") (placeholder "username") (name "username")))
+                         (input ((class "our-input") (type "password") (placeholder "password") (name "password")))
+                         (button ((class "our-button")) "continue")))
+              (div ((class "second-items info"))
+                   "You can sign up instantly by entering your desired username and password in the log in fields."
+                   (br)(br)
+                   "Enjoy being a part of this community!")))))
 
 ; # STATIC FILE SERVING
 
@@ -228,9 +244,26 @@
 
 ; Consume request and return the right thing
 ; request -> X-expr
-(define (start request)
+(define (start r)
   ; session verification will go here
-  (dispatch request))
+  (write (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
+  (newline)
+  ; dispatch request to right function
+  (dispatch r))
+
+; Login required
+(define (logreq f)
+  (lambda (r)
+    (write
+     (let ([session_id (request-id-cookie "sid" (make-secret-salt/file "salt.key") r)])
+       (cond
+         [(not session_id) "Not Allowed"]
+         [(session-exists? db session_id) "Allowed"]
+         [else "Not Allowed"]))
+    )
+    (f r)))
+
+
 
 ; Request dispatching Table
 (define-values (dispatch url)
@@ -239,9 +272,21 @@
    [("about") about-page]
    [("post" (string-arg)) post-page]
    [("submit") submit-page]
-   [("account") account-page]
+   [("account") (logreq account-page)]
    [("submit-new-post") submit-post]
+   [("login") login-page]
    [("static" (string-arg)) serve-asset]
+   [("test-session") (lambda (r) (cond
+                                    [(not (session-exists? db "1234")) (session->db db (session "1234"
+                                                                                            1
+                                                                                            (request-client-ip r)
+                                                                                            "Mozilla"
+                                                                                            "2018-03-10"))])
+                                  
+                                  (response/xexpr "TEST SESSION CREATED" #:cookies (list (make-id-cookie "sid"
+                                                                                  (make-secret-salt/file "salt.key")
+                                                                                  "1234"))))]
+                                  
    [else (lambda (x) (response/xexpr "WRONG TURN, BRO"))]))
 
 

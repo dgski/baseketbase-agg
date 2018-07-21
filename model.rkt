@@ -208,7 +208,9 @@
 (define (delete-session-db db id)
   (query-exec db "DELETE FROM sessions WHERE id = ?" id))
 
-
+; consume a session id and check if it exists
+(define (session-exists? db id)
+  (not (null? (query-rows db "SELECT * FROM sessions WHERE id = ?" id))))
 
 
 
