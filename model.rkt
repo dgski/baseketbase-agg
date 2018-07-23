@@ -174,6 +174,22 @@
               (user-passhash x)
               (user-id x)))
 
+; Get user from database with username
+(define (username->db->user db username)
+  (let ([user-data (query-rows db "SELECT * FROM users WHERE username = ?" username)])
+    (if (null? user-data) #f (let ([u (list-ref user-data 0)])
+                               (user (vector-ref u 0)
+                                     (vector-ref u 1)
+                                     (vector-ref u 2)
+                                     (vector-ref u 3)
+                                     (vector-ref u 4)
+                               )))))
+
+; Get user from database with id
+(define (id->db->user db id)
+  (let ([user-data (query-rows db "SELECT * FROM users WHERE id = ?" id)])
+    (if (null? user-data) #f (list-ref user-data 0))))
+
 ; Consume a uid and return the username
 ; number -> string
 
