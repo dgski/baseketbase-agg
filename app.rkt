@@ -1,14 +1,15 @@
 #lang web-server
 
+; # REQUIRE
 (require web-server/servlet
          web-server/servlet-env
          racket/port
-         web-server/http/id-cookie
-         (prefix-in netcookies: net/cookies/server))
+         )
 
+; # REQUIRE LOCAL
 (require "views.rkt")
 (require "model.rkt")
-
+(require "sessions.rkt")
 
 ; # CREATE DATABASE CONNECTION
 (define db
@@ -29,23 +30,23 @@
                       (div ((style "width: 100%; text-align: right"))
                            ,@(map (lambda (x) x) links)))))))
 
-
-
-
 ; render website heading for logged in user
 (define (render-logged-heading sorter?)
-  (render-heading sorter? (map (lambda (x) `(a ((class "heading-link") (href ,(string-append "/" (car x)))) ,(cadr x))) '(("submit" "submit")
-                                                                                                                        ("about" "about")
-                                                                                                                        ("inbox" "inbox")
-                                                                                                                        ("account" "account")
-                                                                                                                        ("do-logout" "sign out")))))
+  (render-heading sorter? (map (lambda (x) `(a ((class "heading-link")
+                                                (href ,(string-append "/" (car x)))) ,(cadr x)))
+                               '(("submit" "submit")
+                                 ("about" "about")
+                                 ("inbox" "inbox")
+                                 ("account" "account")
+                                 ("do-logout" "sign out")))))
+
 ; render website heading for new user
 (define (render-less-heading sorter?)
-  (render-heading sorter? (map (lambda (x) `(a ((class "heading-link") (href ,(string-append "/" (car x)))) ,(cadr x))) '(("submit" "submit")
-                                                                                                                        ("about" "about")
-                                                                                                                        ("login" "sign in")))))
-
-
+  (render-heading sorter? (map (lambda (x) `(a ((class "heading-link")
+                                                (href ,(string-append "/" (car x)))) ,(cadr x)))
+                               '(("submit" "submit")
+                                 ("about" "about")
+                                 ("login" "sign in")))))
 
 ; render website footer
 (define (render-footer)
@@ -54,7 +55,7 @@
                   (a ((class "control-link") (href "prev")) "< prev")
                   (a ((class "control-link") (href "next")) "next >"))))
 
-; redner website sorter
+; render website sorter
 (define (render-sorter)
   '(select (option ((value "hot")) "hot")
            (option ((value "new")) "new")
@@ -110,10 +111,7 @@
      (body        
       ;,(render-heading #f)
       ,(if (user-logged-in? db r) (render-logged-heading #f) (render-less-heading #f))
-      ,content))
-   
-   ))
-
+      ,content))))
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
 ; comment number -> X-expr
@@ -139,12 +137,12 @@
   `(div ((class "comment-box"))
         ,@(map (lambda (x) (render-comment x 0)) comms)))
 
-
-
 ; # RECIEVING UPDATES
+
+; Consume a request containing new post information and add it to database  if valid
+; request -> redirect to "/"
 (define (submit-post r)
-  ; Insert post into database
-  (post->db db (parse-post (request-bindings r)))
+  (post->db db (parse-post (current-user db r) (request-bindings r)))
   (redirect-to "/"))
 
 
@@ -158,8 +156,7 @@
 ; consume request and return the about page
 ; request -> X-expr
 (define (about-page r)
-  (render-gnr-page
-   r
+  (render-gnr-page r
    "About"
    `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
          (h3 "About This Site")
@@ -171,8 +168,7 @@
 ; consume request and return the account page
 ; request -> X-expr
 (define (account-page r)
-  (render-gnr-page
-   r
+  (render-gnr-page r
    (string-append "id" "'s Profile")
    (let ([u (current-user db r)])
    `(div ((class "items") (style "margin-bottom: 70px;"))
@@ -203,8 +199,7 @@
 ; consume request and return the post being requested along with comments
 ; request -> X-expr
 (define (post-page r id)
-  (render-gnr-page
-   r
+  (render-gnr-page r
    "Post Page"
    `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
          ,(render-item (pid->db->post db (string->number id)))
@@ -214,8 +209,7 @@
 ; consume request and return the submit page
 ; request -> X-expr
 (define (submit-page r)
-  (render-gnr-page
-   r
+  (render-gnr-page r
    "basketbase - Submit Page"
    `(div ((class "items"))
          (div ((class "submit"))
@@ -234,19 +228,9 @@
                     (br)
                     (button ((class "our-button")) "submit"))))))
 
-
-(define (parse-login-info b)
-  (list (extract-binding/single 'username b) (extract-binding/single 'password b)))
-
-
-; Generate session_id
-(define (gen-sid)
-  (foldr (lambda (next prev) (string-append prev (number->string next 16))) "" (for/list ((i 32)) (add1 (random 256)))))
-
 ;consumes request and produces X-xexpr representing the login page
 (define (login-page r)
-  (render-gnr-page
-   r
+  (render-gnr-page r
    "Login"
    '(div ((class "items"))
          (div ((class "top-items"))
@@ -262,25 +246,17 @@
 
 ;consumes request and logs user in
 (define (do-login r)
-  (match-let ([(list username password) (parse-login-info (request-bindings r))])
-    (let ([curr_user (username->db->user db username)])
-      (if curr_user
-          (let ([sid (gen-sid)])
-            (begin (session->db db (session sid
-                                            (user-id curr_user)
-                                            (request-client-ip r)
-                                            "Mozilla"
-                                            "2018-03-10"))
-                   (redirect-to "/" #:headers (list (cookie->header (make-id-cookie "sid"
-                                                                  (make-secret-salt/file "salt.key")
-                                                                  sid))))))
-          (redirect-to "login")))))
+  (attempt-user-login r db))
 
 ; consumes request and logs user out
 (define (do-logout r)
-  (delete-session-db db (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
-  (redirect-to "/" #:headers (list (cookie->header (logout-id-cookie "sid")))))
+  (attempt-user-logout r db))
 
+; Login required
+; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
+; function -> function
+(define (logreq f)
+  (lambda (r) (if (user-logged-in? db r) (f r) (redirect-to "login"))))
 
 ; # STATIC FILE SERVING
 
@@ -304,54 +280,24 @@
   ; dispatch request to right function
   (dispatch r))
 
-; Login required
-; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
-; function -> function
-(define (logreq f)
-  (lambda (r) (if (user-logged-in? db r) (f r) (redirect-to "login"))))
-
-
-;Parse request for session if cookie
-(define (parse-session-info r)
-  (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
-
-; consumes request and determines whether request contains valid active session
-; request -> bool
-(define (user-logged-in? db r)
-  (let ([session_id (parse-session-info r)])
-    (and session_id (session-exists? db session_id))))
-
-; get the currently logged in user
-(define (current-user db r)
-  (let ([session_id (parse-session-info r)])
-    (id->db->user db
-                  (session-uid (sid->db->session db
-                                                 session_id)))))
-
-
 ; Request dispatching Table
 (define-values (dispatch url)
   (dispatch-rules
+
+   ; Main pages
    [("") front-page]
    [("about") about-page]
    [("post" (string-arg)) post-page]
    [("submit") (logreq submit-page)]
    [("account") (logreq account-page)]
    [("submit-new-post") (logreq submit-post)]
+
+   ; Login management
    [("login") login-page]
    [("do-login") do-login]
    [("do-logout") do-logout]
-   [("static" (string-arg)) serve-asset]
-   [("test-session") (lambda (r) (cond
-                                    [(not (session-exists? db "1234")) (session->db db (session "1234"
-                                                                                            1
-                                                                                            (request-client-ip r)
-                                                                                            "Mozilla"
-                                                                                            "2018-03-10"))])
-                                  (response/xexpr "TEST SESSION CREATED" #:cookies (list (make-id-cookie "sid"
-                                                                                  (make-secret-salt/file "salt.key")
-                                                                                  "1234"))))]
-                                  
+   
+   [("static" (string-arg)) serve-asset]                              
    [else (lambda (x) (response/xexpr "WRONG TURN, BRO"))]))
 
 

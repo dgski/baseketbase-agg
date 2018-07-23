@@ -31,9 +31,9 @@
 
 ; Consume request bindings and return post
 ; bindings -> post
-(define (parse-post b)
+(define (parse-post u b)
   (post 0
-        0
+        (user-id u)
         0
         0
         0
@@ -229,10 +229,6 @@
 ; consume a session id and check if it exists
 (define (session-exists? db id)
   (not (null? (query-rows db "SELECT * FROM sessions WHERE id = ?" id))))
-
-
-
-
 
 ; # EXPORTS
 (provide (all-defined-out))
