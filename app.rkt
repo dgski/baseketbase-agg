@@ -3,7 +3,8 @@
 (require web-server/servlet
          web-server/servlet-env
          racket/port
-         web-server/http/id-cookie)
+         web-server/http/id-cookie
+         (prefix-in netcookies: net/cookies/server))
 
 (require "views.rkt")
 (require "model.rkt")
@@ -37,7 +38,7 @@
                                                                                                                         ("about" "about")
                                                                                                                         ("inbox" "inbox")
                                                                                                                         ("account" "account")
-                                                                                                                        ("signout" "sign out")))))
+                                                                                                                        ("do-logout" "sign out")))))
 ; render website heading for new user
 (define (render-less-heading sorter?)
   (render-heading sorter? (map (lambda (x) `(a ((class "heading-link") (href ,(string-append "/" (car x)))) ,(cadr x))) '(("submit" "submit")
@@ -108,7 +109,7 @@
       (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
      (body        
       ;,(render-heading #f)
-      ,(if (user-logged-in db r) (render-logged-heading #f) (render-less-heading #f))
+      ,(if (user-logged-in? db r) (render-logged-heading #f) (render-less-heading #f))
       ,content))
    
    ))
@@ -173,19 +174,20 @@
   (render-gnr-page
    r
    (string-append "id" "'s Profile")
+   (let ([u (current-user db r)])
    `(div ((class "items") (style "margin-bottom: 70px;"))
          (div ((style "padding-top: 25px; text-align: left"))
-              (h3 (string-append "Account Information for '" "id" "'"))
+              (h3 ,(string-append "Account Information for '" (user-username u) "'"))
               (br)
               "Change email:"(br)(br)
-              (input ((class "our-input") (value "fat_papa@gmail.com") (type "email") (name "email")))
+              (input ((class "our-input") (value ,(user-email u)) (type "email") (name "email")))
               (br)(br)
               "Change profile:"(br)(br)
               (textarea ((width "fill")
                          (placeholder "body")
                          (style "margin-bottom: 30px")
                          (class "our-input submit-input submit-text-area"))
-                        "This is the part that you can say a little something about yourself or put a few links to places you care about. If your comment of submission gives someone pause and they want to heard more about you, then they will check out your profile.")
+                        ,(user-profile u))
               (br)
               "Change password:"(br)(br)
               (input ((class "our-input") (type "password") (placeholder "old password") (name "old-password")))
@@ -195,7 +197,7 @@
               (input ((class "our-input") (type "password") (placeholder "re-type new password") (name "new-password-2")))
               (br)
               (button ((class "our-button")) "save changes")
-              (button ((class "our-button") (style "background-color: brown")) "delete account")))))
+              (button ((class "our-button") (style "background-color: brown")) "delete account"))))))
               
    
 ; consume request and return the post being requested along with comments
@@ -258,13 +260,27 @@
                    (br)(br)
                    "Enjoy being a part of this community!")))))
 
-;consumes request
+;consumes request and logs user in
 (define (do-login r)
   (match-let ([(list username password) (parse-login-info (request-bindings r))])
     (let ([curr_user (username->db->user db username)])
       (if curr_user
-          (begin (session->db db (session (gen-sid) (user-id curr_user) (request-client-ip r) "Mozilla" "2018-03-10")) (redirect-to "/"))
+          (let ([sid (gen-sid)])
+            (begin (session->db db (session sid
+                                            (user-id curr_user)
+                                            (request-client-ip r)
+                                            "Mozilla"
+                                            "2018-03-10"))
+                   (redirect-to "/" #:headers (list (cookie->header (make-id-cookie "sid"
+                                                                  (make-secret-salt/file "salt.key")
+                                                                  sid))))))
           (redirect-to "login")))))
+
+; consumes request and logs user out
+(define (do-logout r)
+  (delete-session-db db (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
+  (redirect-to "/" #:headers (list (cookie->header (logout-id-cookie "sid")))))
+
 
 ; # STATIC FILE SERVING
 
@@ -292,18 +308,25 @@
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function
 (define (logreq f)
-  (lambda (r)
-     (let ([session_id (request-id-cookie "sid" (make-secret-salt/file "salt.key") r)])
-       (cond
-         [(not session_id) (redirect-to "login")]
-         [(session-exists? db session_id) (f r)]
-         [else (redirect-to "login")]))))
+  (lambda (r) (if (user-logged-in? db r) (f r) (redirect-to "login"))))
+
+
+;Parse request for session if cookie
+(define (parse-session-info r)
+  (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
 
 ; consumes request and determines whether request contains valid active session
 ; request -> bool
-(define (user-logged-in db r)
-  (let ([session_id (request-id-cookie "sid" (make-secret-salt/file "salt.key") r)])
+(define (user-logged-in? db r)
+  (let ([session_id (parse-session-info r)])
     (and session_id (session-exists? db session_id))))
+
+; get the currently logged in user
+(define (current-user db r)
+  (let ([session_id (parse-session-info r)])
+    (id->db->user db
+                  (session-uid (sid->db->session db
+                                                 session_id)))))
 
 
 ; Request dispatching Table
@@ -317,6 +340,7 @@
    [("submit-new-post") (logreq submit-post)]
    [("login") login-page]
    [("do-login") do-login]
+   [("do-logout") do-logout]
    [("static" (string-arg)) serve-asset]
    [("test-session") (lambda (r) (cond
                                     [(not (session-exists? db "1234")) (session->db db (session "1234"
