@@ -140,8 +140,7 @@
 
 ; consume a list of comments and return a X-expr representing it
 (define (render-comments comms)
-  `(div ((class "comment-box"))
-        ,@(map (lambda (x) (render-comment x 0)) comms)))
+  (map (lambda (x) (render-comment x 0)) comms))
 
 ; # RECIEVING UPDATES
 
@@ -209,8 +208,15 @@
    "Post Page"
    `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
          ,(render-item (pid->db->post db (string->number id)))
-         ,(render-comments (pid->db->comms db (string->number id)))
-         )))
+         (div ((class "comment-box"))
+               (div ((class "reply-box"))
+                    (div ((class "reply-box-textarea"))
+                         (textarea ((placeholder "New Commment...")
+                                    (class "our-input submit-input submit-text-area")
+                                    (style "height: 50px;"))))
+                    (div ((class "reply-box-button"))
+                         (button ((class "our-button")) "Post")))
+               ,(render-comments (pid->db->comms db (string->number id)))))))
 
 ; consume request and return the submit page
 ; request -> X-expr
