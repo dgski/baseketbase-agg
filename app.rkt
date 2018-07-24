@@ -15,6 +15,9 @@
 (define db
   (sqlite3-connect #:database "test-r.db" #:mode 'create))
 
+; # SETUP CRYPTOGRAPHY
+(setup-crypto)
+
 ; # RENDER FUNCTIONS
 
 ; render website heading
@@ -31,14 +34,15 @@
                            ,@(map (lambda (x) x) links)))))))
 
 ; render website heading for logged in user
-(define (render-logged-heading sorter?)
-  (render-heading sorter? (map (lambda (x) `(a ((class "heading-link")
+(define (render-logged-heading username sorter?)
+  (render-heading sorter? (append (map (lambda (x) `(a ((class "heading-link")
                                                 (href ,(string-append "/" (car x)))) ,(cadr x)))
                                '(("submit" "submit")
                                  ("about" "about")
                                  ("inbox" "inbox")
                                  ("account" "account")
-                                 ("do-logout" "sign out")))))
+                                 ("do-logout" "sign out"))) `((b ((class "username"))
+                                                                 ,username)))))
 
 ; render website heading for new user
 (define (render-less-heading sorter?)
@@ -110,7 +114,9 @@
       (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
      (body        
       ;,(render-heading #f)
-      ,(if (user-logged-in? db r) (render-logged-heading #f) (render-less-heading #f))
+      ,(if (user-logged-in? db r)
+           (render-logged-heading (user-username (current-user db r)) #f)
+           (render-less-heading #f))
       ,content))))
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
@@ -274,10 +280,6 @@
 ; Consume request and return the right thing
 ; request -> X-expr
 (define (start r)
-  ; session verification will go here
-  (write (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
-  (newline)
-  ; dispatch request to right function
   (dispatch r))
 
 ; Request dispatching Table

@@ -1,8 +1,29 @@
 #lang web-server
 
-(require web-server/http/id-cookie)
+(require web-server/http/id-cookie
+         crypto
+         crypto/all)
 
 (require "model.rkt")
+
+
+; Use the right crypto libraries
+(define (setup-crypto)
+  (use-all-factories!))
+
+; Get the User Agent from the given request
+; request -> string
+(define (get-user-agent r)
+  (bytes->string/utf-8 (header-value (headers-assq #"User-Agent" (request-headers/raw r)))))
+
+; Hash password
+; string -> hash and formula string
+(define (hashpass p)
+  (pwhash '(pbkdf2 hmac sha256) (string->bytes/utf-8 p) '((iterations 100000))))
+
+; Catches all exceptions
+(define exn:all (lambda (v) #t))
+
 
 ; Generate session_id
 (define (gen-sid)
@@ -21,7 +42,12 @@
 ; request -> bool
 (define (user-logged-in? db r)
   (let ([session_id (parse-session-info r)])
-    (and session_id (session-exists? db session_id))))
+    (and session_id
+         (session-exists? db session_id)
+         (let ([curr_session (sid->db->session db session_id)])
+           (and (equal? (session-ip curr_session) (request-client-ip r))
+                (equal? (session-useragent curr_session) (get-user-agent r))
+                (begin (write (session-expiry curr_session)) (newline) #t))))))
 
 ; get the currently logged in user
 (define (current-user db r)
@@ -33,13 +59,18 @@
 (define (attempt-user-login r db)
   (match-let ([(list username password) (parse-login-info (request-bindings r))])
     (let ([curr_user (username->db->user db username)])
-      (if curr_user
+      (if [and
+           curr_user
+           (non-empty-string? password)
+           (with-handlers ([exn:all (lambda (v) #f)])
+             (pwhash-verify #f (string->bytes/utf-8 password)
+                           (user-passhash curr_user)))]
           (let ([sid (gen-sid)])
             (begin (session->db db (session sid
                                             (user-id curr_user)
                                             (request-client-ip r)
-                                            "Mozilla"
-                                            "2018-03-10"))
+                                            (get-user-agent r)
+                                            "SELECT DATETIME('now','+ 1 month');"))
                    (redirect-to "/" #:headers (list (cookie->header (make-id-cookie "sid"
                                                                                     (make-secret-salt/file "salt.key")
                                                                                     sid))))))
