@@ -1,9 +1,13 @@
 #lang racket
 
-(require "model.rkt")
+(require "model.rkt"
+         "sessions.rkt")
+
+; # SETUP CRYPTOGRAPHY
+(setup-crypto)
 
 (define our_db
-  (sqlite3-connect #:database "test-r.db" #:mode 'create))
+  (sqlite3-connect #:database "baseketbase.db" #:mode 'create))
 
 
 ;Create Users table
@@ -103,5 +107,5 @@
 
 
 
-(user->db our_db (user 0 "jose_gonzalez" "jose@gonzalez.com" "" "xxxxx"))
+(user->db our_db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234")))
 (user->db our_db (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx"))

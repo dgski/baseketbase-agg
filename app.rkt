@@ -13,7 +13,7 @@
 
 ; # CREATE DATABASE CONNECTION
 (define db
-  (sqlite3-connect #:database "test-r.db" #:mode 'create))
+  (sqlite3-connect #:database "baseketbase.db" #:mode 'create))
 
 ; # SETUP CRYPTOGRAPHY
 (setup-crypto)
@@ -71,7 +71,14 @@
   `(div ((class "item"))
         (div ((class "heat-level"))
              (div ((class "heat-level-cont"))
-                  (div ((class "voters")) (span ((class "voter")) "▼") (span ((class "voter")) "▲")) ,(number->string (- (post-pos x) (post-neg x)))))
+                  (div ((class "voters"))
+                       (a ((class "voter-link")
+                           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=up")))
+                           (span ((class "voter")) "▲"))
+                       (a ((class "voter-link")
+                           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=downv")))
+                          (span ((class "voter")) "▼")))
+                  ,(number->string (- (post-pos x) (post-neg x)))))
         (a ((class "item-link")(href ,(post-url x))) (div ((class "content"))
              (div ((class "title")) ,(post-title x))
              (div ((class "url-sample")) ,(post-url x))))
@@ -150,6 +157,35 @@
   (post->db db (parse-post (current-user db r) (request-bindings r)))
   (redirect-to "/"))
 
+; consume request, pid and return the post page (after adding comment)
+; request -> redirect to "/post/pid"
+(define (add-comment r pid)
+  (let ([bindings (request-bindings r)])
+    (comment->db db (comment 0
+                             (user-id (current-user db r))
+                             pid
+                             1
+                             0
+                             1
+                             "2018-07-20"
+                             (extract-binding/single 'body bindings)
+                             -1)))
+  (redirect-to (string-append "/post/" (number->string pid))))
+
+; consume request return previous page
+
+
+(define (vote r)
+  (let* ([bindings (request-bindings r)]
+         [type (extract-binding/single 'type bindings)]
+         [id (string->number (extract-binding/single 'id bindings))]
+         [dir (extract-binding/single 'dir bindings)])
+     (response/xexpr "Voted!")))
+    
+    
+                    
+
+
 
 ; # PAGE RESPONSE FUNCTIONS
 
@@ -207,16 +243,19 @@
   (render-gnr-page r
    "Post Page"
    `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-         ,(render-item (pid->db->post db (string->number id)))
+         ,(render-item (pid->db->post db id))
          (div ((class "comment-box"))
-               (div ((class "reply-box"))
-                    (div ((class "reply-box-textarea"))
-                         (textarea ((placeholder "New Commment...")
-                                    (class "our-input submit-input submit-text-area")
-                                    (style "height: 50px;"))))
-                    (div ((class "reply-box-button"))
-                         (button ((class "our-button")) "Post")))
-               ,(render-comments (pid->db->comms db (string->number id)))))))
+              ,(if (user-logged-in? db r)
+                   `(form ((class "reply-box")
+                           (action ,(string-append "/add-comment/" (number->string id))))
+                          (div ((class "reply-box-textarea"))
+                               (textarea ((placeholder "New Commment...")
+                                          (class "our-input submit-input submit-text-area")
+                                          (style "height: 50px;")
+                                          (name "body"))))
+                          (div ((class "reply-box-button"))
+                               (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
+               ,@(render-comments (pid->db->comms db id)))))
 
 ; consume request and return the submit page
 ; request -> X-expr
@@ -268,7 +307,7 @@
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function
 (define (logreq f)
-  (lambda (r) (if (user-logged-in? db r) (f r) (redirect-to "login"))))
+  (lambda args (if (user-logged-in? db (car args)) (apply f args) (redirect-to "login"))))
 
 ; # STATIC FILE SERVING
 
@@ -295,10 +334,15 @@
    ; Main pages
    [("") front-page]
    [("about") about-page]
-   [("post" (string-arg)) post-page]
-   [("submit") (logreq submit-page)]
+   [("post" (integer-arg)) post-page]
+   
    [("account") (logreq account-page)]
    [("submit-new-post") (logreq submit-post)]
+
+   ; Posting
+   [("submit") (logreq submit-page)]
+   [("add-comment" (integer-arg)) (logreq add-comment)]
+   [("vote") (logreq vote)]
 
    ; Login management
    [("login") login-page]
