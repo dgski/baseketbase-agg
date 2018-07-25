@@ -74,8 +74,8 @@
                                        ("uid" "INTEGER")
                                        ("pid" "INTEGER")
                                        ("cid" "INTEGER")
-                                       ("type" "INTEGER")
-                                       ("direction" "INTEGER")))) "votes table already exists")
+                                       ("type" "INTEGER") ; 0 - post, 1 - comment
+                                       ("dir" "INTEGER")))) "votes table already exists")
 
 
 

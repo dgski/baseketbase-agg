@@ -90,6 +90,21 @@
 (define (uid->db->posts db uid)
   (vector->post (query-rows db "SELECT * FROM posts WHERE uid = ?" uid) 0))
 
+; Update the vote tallys for this post
+(define (alter-post-vote db id dir)
+  (let ([currpost (pid->db->post db id)])
+    (cond
+      [(equal? dir "up")
+       (query-exec db "UPDATE posts SET pos = ?, score = ? WHERE id = ?"
+                   (add1 (post-pos currpost))
+                   (add1 (post-score currpost))
+                   id)]
+      [else
+       (query-exec db "UPDATE posts SET neg = ?, score = ? WHERE id = ?"
+                   (add1 (post-neg currpost))
+                   (sub1 (post-score currpost))
+                   id)])))
+       
 ;# COMMENTS
 
 ; Comment convenience struct
@@ -176,6 +191,7 @@
 ; Update user in database
 (define (user->db! db x)
   (query-exec db "UPDATE ? SET username = ?, email = ?, profile = ?, passhash = ? WHERE id = ?"
+              "users"
               (user-username x)
               (user-email x)
               (user-profile x)
@@ -230,9 +246,28 @@
 (define (session-exists? db id)
   (not (null? (query-rows db "SELECT * FROM sessions WHERE id = ?" id))))
 
+; # VOTES
+; Votes convenience struct
+(struct vote (id uid pid cid type dir))
+
+; consume vote and add to db
+(define (vote->db db x)
+  (query-exec db "INSERT INTO votes (uid, pid, cid, type, dir) VALUES (?,?,?,?,?)"
+              (vote-uid x)
+              (vote-pid x)
+              (vote-cid x)
+              (vote-type x)
+              (vote-dir x)))
+
+; consume uid, pid and return whether user voted on this post already
+(define (user-voted-on-post db uid pid)
+  (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND pid = ?" uid pid)])
+    (if (null? v) #f #t)))
+
+
+
 ; # EXPORTS
 (provide (all-defined-out))
 (provide (all-from-out db))
-
 
 

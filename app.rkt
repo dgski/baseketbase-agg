@@ -28,7 +28,7 @@
                  (div ((class "heading-text"))
                       (a ((class "heading-link-main") (href "/"))
                          "basket" (span ((class "base")) ".") "base"))
-                 ,(if sorter? `(div ((class "heading-sorter")) ,(render-sorter)) "")
+                 ,(if sorter? `(div ((class "heading-sorter")) ,@(render-sorter)) "")
                  (div ((class "heading-links"))
                       (div ((style "width: 100%; text-align: right"))
                            ,@(map (lambda (x) x) links)))))))
@@ -61,23 +61,28 @@
 
 ; render website sorter
 (define (render-sorter)
-  '(select (option ((value "hot")) "hot")
-           (option ((value "new")) "new")
-           (option ((value "top")) "top")))
+  `((a ((class "sorter-links sorter-link-active") (href "/?sort=hot")) "hot")
+    (a ((class "sorter-link") (href "/?sort=new")) "new")
+    (a ((class "sorter-link") (href "/?sort=top")) "top")))
+
+; render post voters
+(define (render-voters x)
+  `(div ((class "voters"))
+       (a ((class "voter-link")
+           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=up")))
+          (span ((class "voter")) "▲"))
+       (a ((class "voter-link")
+           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=downv")))
+          (span ((class "voter")) "▼"))))
+
 
 ; consume item x and return X-expr representing data
 ; item -> X-expr
-(define (render-item x)
+(define (render-post x)
   `(div ((class "item"))
         (div ((class "heat-level"))
              (div ((class "heat-level-cont"))
-                  (div ((class "voters"))
-                       (a ((class "voter-link")
-                           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=up")))
-                           (span ((class "voter")) "▲"))
-                       (a ((class "voter-link")
-                           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=downv")))
-                          (span ((class "voter")) "▼")))
+                  ,(render-voters x)
                   ,(number->string (- (post-pos x) (post-neg x)))))
         (a ((class "item-link")(href ,(post-url x))) (div ((class "content"))
              (div ((class "title")) ,(post-title x))
@@ -90,29 +95,29 @@
 
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
-(define (render-items)
-  (let ([items (get-posts db)])
+(define (render-posts order)
+  (let ([posts (get-posts db)])
     `(div ((class "items"))
-        ,(render-top-items (take items 3))
-        ,@(map render-item (cdddr items))
+        ,(render-top-posts (take posts 3))
+        ,@(map render-post (cdddr posts))
         ,(render-footer))))
 
 ; consume a list of three items and return an X-exp representing it
 ; list of item -> X-expr
-(define (render-top-items lat)
+(define (render-top-posts lat)
   `(div ((class "top-items"))
         (div ((class "top-item"))
              (div ((class "img-crop") (style "height: 252px;")))
-             ,(render-item (list-ref lat 0)))
+             ,(render-post (list-ref lat 0)))
         (div ((class "second-items"))
              (div ((class "img-crop") (style "height: 104px")))
-             ,(render-item (list-ref lat 1))
+             ,(render-post (list-ref lat 1))
              (div ((class "img-crop") (style "height: 104px")))
-             ,(render-item (list-ref lat 2)))))
+             ,(render-post (list-ref lat 2)))))
 
 ; consume a title and an X-expr and return a X-expr for a general page
 ; string X-expr -> X-expr
-(define (render-gnr-page r title content)
+(define (render-gnr-page r title content #:sorter [sorter #f])
   (response/xexpr
    #:preamble #"<!doctype html>"
    `(html
@@ -122,8 +127,8 @@
      (body        
       ;,(render-heading #f)
       ,(if (user-logged-in? db r)
-           (render-logged-heading (user-username (current-user db r)) #f)
-           (render-less-heading #f))
+           (render-logged-heading (user-username (current-user db r)) sorter)
+           (render-less-heading sorter))
       ,content))))
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
@@ -175,12 +180,26 @@
 ; consume request return previous page
 
 
-(define (vote r)
+(define (submit-vote r)
   (let* ([bindings (request-bindings r)]
          [type (extract-binding/single 'type bindings)]
-         [id (string->number (extract-binding/single 'id bindings))]
-         [dir (extract-binding/single 'dir bindings)])
-     (response/xexpr "Voted!")))
+         [pid (string->number (extract-binding/single 'id bindings))]
+         [dir (extract-binding/single 'dir bindings)]
+         [uid (user-id (current-user db r))])
+
+    (cond
+      [(equal? type "post")
+       (if (user-voted-on-post db uid pid)
+            (redirect-to "/")
+           (begin (vote->db db (vote 0
+                                     uid
+                                     pid
+                                     -1
+                                     0 ;post
+                                     (if (equal? dir "up") 1 0)))
+                  (alter-post-vote db pid dir) ; Change post score
+                  (redirect-to "/")))])))
+       
     
     
                     
@@ -192,7 +211,8 @@
 ; consume request and return the front page
 ; request -> X-expr
 (define (front-page r)
-  (render-gnr-page  r "basketbase - Front Page" (render-items)))
+  ;(let ([order (extract-binding/single 'sort (request-bindings r))])
+    (render-gnr-page  #:sorter #t r "basketbase - Front Page" (render-posts #f)))
 
 ; consume request and return the about page
 ; request -> X-expr
@@ -243,7 +263,7 @@
   (render-gnr-page r
    "Post Page"
    `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-         ,(render-item (pid->db->post db id))
+         ,(render-post (pid->db->post db id))
          (div ((class "comment-box"))
               ,(if (user-logged-in? db r)
                    `(form ((class "reply-box")
@@ -342,7 +362,7 @@
    ; Posting
    [("submit") (logreq submit-page)]
    [("add-comment" (integer-arg)) (logreq add-comment)]
-   [("vote") (logreq vote)]
+   [("vote") (logreq submit-vote)]
 
    ; Login management
    [("login") login-page]

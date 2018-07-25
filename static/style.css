@@ -35,8 +35,9 @@ body {
 }
 
 .heading-link{
+    font-size: 12px;
     padding-left: 10px;
-    color: black;
+    color: rgb(133, 140, 172);
     text-decoration: none;
 }
 
@@ -72,6 +73,19 @@ body {
     display: flex;
     align-items: center;
     padding-left: 20px;
+    font-size: 12px;
+}
+
+.sorter-link{
+    font-size: 12px;
+    padding-left: 10px;
+    color: rgb(133, 140, 172);
+    text-decoration: none;
+}
+
+.sorter-link-active{
+    color: black;
+    font-weight: bold;
 }
 
 
@@ -366,6 +380,10 @@ body {
 .voter-link {
     text-decoration: none;
     color: rgb(133, 140, 172);
+}
+
+.voted {
+    color: black;
 }
 
 .info {
