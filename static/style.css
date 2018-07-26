@@ -83,6 +83,10 @@ body {
     text-decoration: none;
 }
 
+.sorter-link:hover{
+    text-decoration: underline;
+}
+
 .sorter-link-active{
     color: black;
     font-weight: bold;

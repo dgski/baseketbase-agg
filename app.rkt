@@ -163,7 +163,7 @@
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
 ; comment number -> X-expr
-(define (render-comment x depth)
+(define (render-comment x depth render-reply)
   (let ([current (car x)]
         [replies (cadr x)])
   `(div ((class"comment" ))
@@ -172,18 +172,23 @@
                   (div ((class "comment-username")) (span ((class "voters"))
                                                           (span ((class "voter")) "▼")
                                                           (span ((class "voter")) "▲"))
-                       ,(uid->db->string db (comment-uid current)))
+                       ,(uid->db->string db (comment-uid current))
+                       ,(if render-reply `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid="
+                                                                      (number->string (comment-id current))
+                                                                      "&pid="
+                                                                      (number->string (comment-pid current))))) "reply") ""))
                   (div ((class "comment-body")) ,(comment-body current)))
              (div ((class "comment-datetime"))
                   (div ((class "datetime-container"))
                        ,(date->string (seconds->date (comment-datetime current)) #t))))
         
-         ,(if [> 4 depth]`(div ((class "comment-replies"))
-         ,@(map (lambda (x) (render-comment x (+ 1 depth))) replies))""))))
+         ,(if [> 4 depth] `(div ((class "comment-replies"))
+         ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply)) replies))
+              `(div ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply)) replies) )))))
 
 ; consume a list of comments and return a X-expr representing it
-(define (render-comments comms)
-  (map (lambda (x) (render-comment x 0)) comms))
+(define (render-comments comms render-reply)
+    (map (lambda (x) (render-comment x 0 render-reply)) comms))
 
 ; # RECIEVING UPDATES
 
@@ -196,7 +201,9 @@
 ; consume request, pid and return the post page (after adding comment)
 ; request -> redirect to "/post/pid"
 (define (add-comment r pid)
-  (let ([bindings (request-bindings r)])
+  (let* ([bindings (request-bindings r)]
+         [body (extract-binding/single 'body bindings)]
+         [replyto (if (exists-binding? 'replyto bindings) (string->number (extract-binding/single 'replyto bindings)) -1)])
     (comment->db db (comment 0
                              (user-id (current-user db r))
                              pid
@@ -204,8 +211,8 @@
                              0
                              1
                              "2018-07-20"
-                             (extract-binding/single 'body bindings)
-                             -1)))
+                             body
+                             replyto)))
   (inc-comment-db db pid)
   (redirect-to (string-append "/post/" (number->string pid))))
 
@@ -231,10 +238,31 @@
                                      (if (equal? dir "up") 1 0)))
                   (alter-post-vote db pid dir) ; Change post score
                   (redirect-to "/")))])))
-       
-    
-    
-                    
+
+; consume a request, return a page that allows replying to the given comment
+(define (reply-comment r)
+  (let* ([bindings (request-bindings r)]
+         [pid (extract-binding/single 'pid bindings)]
+         [cid (extract-binding/single 'cid bindings)])
+    (render-gnr-page r
+                     "Reply to:"
+                     `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
+                           (h3 "Replying to:")
+                           
+                           ,(render-comment (list(id->db->comment db cid) '()) 0 #f)
+                           (br)(br)
+                           (form ((class "reply-box")
+                                  (action ,(string-append "/add-comment/" pid)))
+                                 (div ((class "reply-box-textarea"))
+                                      (textarea ((placeholder "New Commment...")
+                                                 (class "our-input submit-input submit-text-area")
+                                                 (style "height: 50px;")
+                                                 (name "body")
+                                                 (active "")))
+                                      (input ((type "hidden") (name "replyto") (value ,cid))))
+                            
+                                 (div ((class "reply-box-button"))
+                                      (button ((class "our-button") (style "margin-right: 0px;")) "Post")))))))
 
 
 
@@ -293,22 +321,23 @@
 ; consume request and return the post being requested along with comments
 ; request -> X-expr
 (define (post-page r id)
-  (render-gnr-page r
-   "Post Page"
-   `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-         ,(render-post (pid->db->post db id))
-         (div ((class "comment-box"))
-              ,(if (user-logged-in? db r)
-                   `(form ((class "reply-box")
-                           (action ,(string-append "/add-comment/" (number->string id))))
-                          (div ((class "reply-box-textarea"))
-                               (textarea ((placeholder "New Commment...")
-                                          (class "our-input submit-input submit-text-area")
-                                          (style "height: 50px;")
-                                          (name "body"))))
-                          (div ((class "reply-box-button"))
-                               (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
-               ,@(render-comments (pid->db->comms db id)))))
+  (let ([render-reply (user-logged-in? db r)])
+    (render-gnr-page r
+                     "Post Page"
+                     `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
+                           ,(render-post (pid->db->post db id))
+                           (div ((class "comment-box"))
+                                ,(if (user-logged-in? db r)
+                                     `(form ((class "reply-box")
+                                             (action ,(string-append "/add-comment/" (number->string id))))
+                                            (div ((class "reply-box-textarea"))
+                                                 (textarea ((placeholder "New Commment...")
+                                                            (class "our-input submit-input submit-text-area")
+                                                            (style "height: 50px;")
+                                                            (name "body"))))
+                                            (div ((class "reply-box-button"))
+                                                 (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
+                           ,@(render-comments (pid->db->comms db id) render-reply)))))
 
 ; consume request and return the submit page
 ; request -> X-expr
@@ -378,6 +407,7 @@
 ; Consume request and return the right thing
 ; request -> X-expr
 (define (start r)
+  (write (request-bindings r)) (newline)
   (dispatch r))
 
 ; Request dispatching Table
@@ -388,21 +418,23 @@
    [("") front-page]
    [("about") about-page]
    [("post" (integer-arg)) post-page]
-   
    [("account") (logreq account-page)]
    [("submit-new-post") (logreq submit-post)]
 
-   ; Posting
+   ; Receiving Data
    [("submit") (logreq submit-page)]
    [("add-comment" (integer-arg)) (logreq add-comment)]
    [("vote") (logreq submit-vote)]
+   [("reply-comment") (logreq reply-comment)]
 
    ; Login management
    [("login") login-page]
    [("do-login") do-login]
    [("do-logout") do-logout]
-   
-   [("static" (string-arg)) serve-asset]                              
+
+   ; Utilities
+   [("static" (string-arg)) serve-asset]
+
    [else (lambda (x) (response/xexpr "WRONG TURN, BRO"))]))
 
 

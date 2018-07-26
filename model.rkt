@@ -42,9 +42,9 @@
 (define (parse-post u b)
   (post 0
         (user-id u)
+        1
         0
-        0
-        0
+        1
         (current-datetime)
         (extract-binding/single 'title b)
         (extract-binding/single 'url b)
