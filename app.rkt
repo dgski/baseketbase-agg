@@ -5,12 +5,16 @@
          web-server/servlet-env
          racket/port
          racket/date
+         threading
          )
 
 ; # REQUIRE LOCAL
 (require "views.rkt")
 (require "model.rkt")
 (require "sessions.rkt")
+
+; # CONSTANT
+(define POST_DECAY_RATE (expt 0.5 (/ 1 86400)))
 
 ; # CREATE DATABASE CONNECTION
 (define db
@@ -22,21 +26,21 @@
 ; # RENDER FUNCTIONS
 
 ; render website heading
-(define (render-heading sorter? links)
+(define (render-heading sorter? order links)
   `(div ((class "heading"))
        (div ((class "heading-holder"))
             (div ((class "heading-helper"))
                  (div ((class "heading-text"))
                       (a ((class "heading-link-main") (href "/"))
                          "basket" (span ((class "base")) ".") "base"))
-                 ,(if sorter? `(div ((class "heading-sorter")) ,@(render-sorter)) "")
+                 ,(if sorter? `(div ((class "heading-sorter")) ,@(render-sorter order)) "")
                  (div ((class "heading-links"))
                       (div ((style "width: 100%; text-align: right"))
                            ,@(map (lambda (x) x) links)))))))
 
 ; render website heading for logged in user
-(define (render-logged-heading username sorter?)
-  (render-heading sorter? (append (map (lambda (x) `(a ((class "heading-link")
+(define (render-logged-heading username sorter? order)
+  (render-heading sorter? order (append (map (lambda (x) `(a ((class "heading-link")
                                                 (href ,(string-append "/" (car x)))) ,(cadr x)))
                                '(("submit" "submit")
                                  ("about" "about")
@@ -46,8 +50,8 @@
                                                                  ,username)))))
 
 ; render website heading for new user
-(define (render-less-heading sorter?)
-  (render-heading sorter? (map (lambda (x) `(a ((class "heading-link")
+(define (render-less-heading sorter? order)
+  (render-heading sorter? order (map (lambda (x) `(a ((class "heading-link")
                                                 (href ,(string-append "/" (car x)))) ,(cadr x)))
                                '(("submit" "submit")
                                  ("about" "about")
@@ -61,10 +65,13 @@
                   (a ((class "control-link") (href "next")) "next >"))))
 
 ; render website sorter
-(define (render-sorter)
-  `((a ((class "sorter-links sorter-link-active") (href "/?sort=hot")) "hot")
-    (a ((class "sorter-link") (href "/?sort=new")) "new")
-    (a ((class "sorter-link") (href "/?sort=top")) "top")))
+(define (render-sorter order)
+  (let ([hot (if (equal? order "hot") "sorter-link-active" "")]
+        [new (if (equal? order "new") "sorter-link-active" "")]
+        [top (if (equal? order "top") "sorter-link-active" "")])
+  `((a ((class ,(string-append "sorter-link" " " hot)) (href "/?sort=hot")) "hot")
+    (a ((class ,(string-append "sorter-link" " " new)) (href "/?sort=new")) "new")
+    (a ((class ,(string-append "sorter-link" " " top)) (href "/?sort=top")) "top"))))
 
 ; render post voters
 (define (render-voters x)
@@ -84,7 +91,7 @@
         (div ((class "heat-level"))
              (div ((class "heat-level-cont"))
                   ,(render-voters x)
-                  ,(number->string (- (post-pos x) (post-neg x)))))
+                  ,(number->string (post-score x))))
         (a ((class "item-link")(href ,(post-url x))) (div ((class "content"))
              (div ((class "title")) ,(post-title x))
              (div ((class "url-sample")) ,(post-url x))))
@@ -94,10 +101,32 @@
                       (href ,(string-append  "/post/" (number->string (post-id x)))))
                      ,(string-append (number->string (post-numcom x)) " comments"))))))
 
+
+; Calculate the heat level of the post
+(define (calc-post-heat x)
+  (* (post-score x) (expt POST_DECAY_RATE (- (current-datetime) (post-datetime x)))))
+
+
+; consume a string and return list
+(define (get-sorted-posts db type)
+  (let ([posts (get-posts db)])
+    (cond
+      [(equal? type "hot")
+       (~> posts
+           (map (lambda (x) (cons (calc-post-heat x) x)) _)
+           (sort _ (lambda (a b) (if (< (post-score (cdr a)) (post-score (cdr b))) #f #t)))
+           (map (lambda (x) (cdr x)) _))]
+      [(equal? type "top")
+       (sort posts (lambda (a b) (if (< (post-score a) (post-score b)) #f #t)))]
+      [(equal? type "new")
+       (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))]))
+  )
+    
+
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
 (define (render-posts order)
-  (let ([posts (get-posts db)])
+  (let ([posts (get-sorted-posts db order)])
     `(div ((class "items"))
         ,(render-top-posts (take posts 3))
         ,@(map render-post (cdddr posts))
@@ -118,7 +147,7 @@
 
 ; consume a title and an X-expr and return a X-expr for a general page
 ; string X-expr -> X-expr
-(define (render-gnr-page r title content #:sorter [sorter #f])
+(define (render-gnr-page r title content #:sorter [sorter #f] #:order [order "hot"])
   (response/xexpr
    #:preamble #"<!doctype html>"
    `(html
@@ -128,8 +157,8 @@
      (body        
       ;,(render-heading #f)
       ,(if (user-logged-in? db r)
-           (render-logged-heading (user-username (current-user db r)) sorter)
-           (render-less-heading sorter))
+           (render-logged-heading (user-username (current-user db r)) sorter order)
+           (render-less-heading sorter order))
       ,content))))
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
@@ -214,8 +243,9 @@
 ; consume request and return the front page
 ; request -> X-expr
 (define (front-page r)
-  ;(let ([order (extract-binding/single 'sort (request-bindings r))])
-    (render-gnr-page  #:sorter #t r "basketbase - Front Page" (render-posts #f)))
+  (let* ([bindings (request-bindings r)]
+         [order (if (exists-binding? 'sort bindings) (extract-binding/single 'sort bindings) "hot")])
+    (render-gnr-page  #:order order #:sorter #t r "basketbase - Front Page" (render-posts order))))
 
 ; consume request and return the about page
 ; request -> X-expr
