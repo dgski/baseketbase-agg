@@ -6,7 +6,6 @@
 
 (require "model.rkt")
 
-
 ; Use the right crypto libraries
 (define (setup-crypto)
   (use-all-factories!))
@@ -46,8 +45,8 @@
          (session-exists? db session_id)
          (let ([curr_session (sid->db->session db session_id)])
            (and (equal? (session-ip curr_session) (request-client-ip r))
-                (equal? (session-useragent curr_session) (get-user-agent r))
-                (begin (write (session-expiry curr_session)) (newline) #t))))))
+                (< (current-datetime) (session-expiry curr_session))
+                (equal? (session-useragent curr_session) (get-user-agent r)))))))
 
 ; get the currently logged in user
 (define (current-user db r)

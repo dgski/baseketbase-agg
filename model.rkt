@@ -3,6 +3,9 @@
 (require db
          web-server/servlet)
 
+(define 2WEEKS 1209600)
+
+
 ; # UTILITY FUNCTIONS
 
 ; consumes lat of pairs and return a string representing a column
@@ -16,6 +19,11 @@
                        (car (cdr (car lat))) 
                        ((lambda (lat) (if (null? lat) "" ", ")) (cdr lat)) 
                        (create-col (cdr lat))))))
+
+
+
+(define (current-datetime)
+  (floor (* 0.001 (current-inexact-milliseconds))))
 
 ; consumes string and list or lists and returns a string representing a table
 ; string, list -> string
@@ -37,7 +45,7 @@
         0
         0
         0
-        "GETDATE()"
+        (current-datetime)
         (extract-binding/single 'title b)
         (extract-binding/single 'url b)
         (extract-binding/single 'title b)
@@ -52,7 +60,7 @@
               (post-pos x)
               (post-neg x)
               (post-score x)
-              (post-datetime x)
+              (current-datetime)
               (post-title x)
               (post-url x)
               (post-body x)
@@ -104,6 +112,13 @@
                    (add1 (post-neg currpost))
                    (sub1 (post-score currpost))
                    id)])))
+
+; Update the number of comments for this post
+(define (inc-comment-db db pid)
+  (let ([currpost (pid->db->post db pid)])
+    (query-exec db "UPDATE posts SET numcom = ? WHERE id = ?"
+                (add1 (post-numcom currpost))
+                pid)))
        
 ;# COMMENTS
 
@@ -133,7 +148,7 @@
               (comment-pos x)
               (comment-neg x)
               (comment-score x)
-              (comment-datetime x)
+              (current-datetime)
               (comment-body x)
               (comment-replyto x)))
 
@@ -226,7 +241,7 @@
               (session-uid x)
               (session-ip x)
               (session-useragent x)
-              (session-expiry x)))
+              (+ (current-datetime) 2WEEKS)))
 
 ; consume a session id and return a session
 ; string -> session

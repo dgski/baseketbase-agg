@@ -26,7 +26,7 @@
                                        ("pos" "INTEGER")
                                        ("neg" "INTEGER")
                                        ("score" "INTEGER")
-                                       ("datetime" "DATETIME")
+                                       ("datetime" "INTEGER")
                                        ("title" "TEXT")
                                        ("url" "TEXT")
                                        ("body" "TEXT")
@@ -43,7 +43,7 @@
                                        ("pos" "INTEGER")
                                        ("neg" "INTEGER")
                                        ("score" "INTEGER")
-                                       ("datetime" "DATETIME")
+                                       ("datetime" "INTEGER")
                                        ("body" "TEXT")
                                        ("replyto" "INTEGER")))) "comments table already exists")
 
@@ -54,7 +54,7 @@
                                        ("uid" "INTEGER")
                                        ("ip" "TEXT")
                                        ("useragent" "TEXT")
-                                       ("expiry" "DATETIME")))) "sessions table already exists")
+                                       ("expiry" "INTEGER")))) "sessions table already exists")
 
 ; Create messages table
 (if (not (table-exists? our_db "messages"))
@@ -63,7 +63,7 @@
                                        ("uid_to" "INTEGER")
                                        ("uid_from" "INTEGER")
                                        ("body" "TEXT")
-                                       ("datetime" "DATETIME")
+                                       ("datetime" "INTEGER")
                                        ("seen" "INTEGER")
                                        ("replyto" "INTEGER"))))) "messages table already exists")
 
@@ -81,6 +81,24 @@
 
 ; Add Sample Posts Into db
 ; (struct post (id uid pos neg score datetime title url body numcomm section))
+(define sample-posts (list (post 0 0 999 234 765 0 "Incredible Sights" "Bill Thompson" "" 4 "front")
+                           (post 0 0 700 234 66 0 "Castles" "http://discover.com" "" 0 "front")
+                           (post 0 0 499 234 66 0 "Nothing" "Bill Hulio" "" 0 "front")
+                           (post 0 0 234 23 66 0 "Apple's New iPhone is Triangular" "http://apple.com" "" 0 "front")
+                           (post 0 0 580 234 66 0 "Some People still don't know this fact" "http://wikipedia.org" "" 0 "front")
+                           (post 0 0 876 0 876 0 "The Artic Ocean at Sundown" "http://nationalgeographic.com" "" 0 "front")
+                           (post 0 0 43 0 43 0 "Does anyone need a job in Belfast?" "reginald_papa" "" 0 "front")
+                           (post 0 0 77 0 876 0 "The Truth Behind Medicine" "http://popularscience.com" "" 0 "front")
+                           (post 0 0 11 0 876 0 "Stoic Philosophy" "http://medium.com" "" 0 "front")
+                           (post 0 0 1002 0 876 0 "We Need Biking More than Ever" "http://nytimes.com" "" 0 "front")
+                           (post 0 0 300 0 876 0 "Minimalism: Start Guide" "http://medium.com" "" 0 "front")
+                           (post 0 0 109 0 876 0 "Avengers: Infinity War - HISHE" "http://youtube.com" "" 0 "front")
+                           (post 0 0 10 0 876 0 "When Life Seems like too much.." "http://basket.base" "" 0 "front")
+                           (post 0 0 54 0 876 0 "Top Museums, Rome - Pictures" "http://instagram.com" "" 0 "front")
+                           ))
+(map (lambda (x) (post->db our_db x)) sample-posts)
+
+#|
 (define sample-posts (list (post 0 0 999 234 765 0 "Incredible Sights" "Bill Thompson" "" 671 "front")
                            (post 0 0 700 234 66 0 "Castles" "http://discover.com" "" 9 "front")
                            (post 0 0 499 234 66 0 "Nothing" "Bill Hulio" "" 900 "front")
@@ -97,12 +115,14 @@
                            (post 0 0 54 0 876 0 "Top Museums, Rome - Pictures" "http://instagram.com" "" 8 "front")
                            ))
 (map (lambda (x) (post->db our_db x)) sample-posts)
+|#
+
 
 ; Add Sample comments
-(comment->db our_db (comment 1 2 1 3 4 5 "2018-03-10" "This is a top level comment" -1))
-(comment->db our_db (comment 1 2 1 3 4 5 "2018-07-10" "This is a reply" 1))
-(comment->db our_db (comment 1 2 1 3 4 5 "2018-10-10" "This is another reply" 1))
-(comment->db our_db (comment 1 2 1 3 4 5 "2018-22-10" "Third level down." 2))
+(comment->db our_db (comment 1 2 1 3 4 5 1000 "This is a top level comment" -1))
+(comment->db our_db (comment 1 2 1 3 4 5 1000 "This is a reply" 1))
+(comment->db our_db (comment 1 2 1 3 4 5 1000 "This is another reply" 1))
+(comment->db our_db (comment 1 2 1 3 4 5 1000 "Third level down." 2))
 
 
 

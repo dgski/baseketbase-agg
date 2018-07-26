@@ -4,6 +4,7 @@
 (require web-server/servlet
          web-server/servlet-env
          racket/port
+         racket/date
          )
 
 ; # REQUIRE LOCAL
@@ -145,7 +146,8 @@
                        ,(uid->db->string db (comment-uid current)))
                   (div ((class "comment-body")) ,(comment-body current)))
              (div ((class "comment-datetime"))
-                  (div ((class "datetime-container")) ,(comment-datetime current))))
+                  (div ((class "datetime-container"))
+                       ,(date->string (seconds->date (comment-datetime current)) #t))))
         
          ,(if [> 4 depth]`(div ((class "comment-replies"))
          ,@(map (lambda (x) (render-comment x (+ 1 depth))) replies))""))))
@@ -175,6 +177,7 @@
                              "2018-07-20"
                              (extract-binding/single 'body bindings)
                              -1)))
+  (inc-comment-db db pid)
   (redirect-to (string-append "/post/" (number->string pid))))
 
 ; consume request return previous page
