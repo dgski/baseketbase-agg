@@ -264,6 +264,33 @@
                                  (div ((class "reply-box-button"))
                                       (button ((class "our-button") (style "margin-right: 0px;")) "Post")))))))
 
+; consume a request filled with user's updated information, write to database and redirect
+; request -> redirect
+
+(define (update-user r)
+   (let* ([curruser (current-user db r)]
+          [bindings (request-bindings r)]
+          [email (extract-binding/single 'email bindings)]
+          [profile (extract-binding/single 'profile bindings)]
+          [old-pass (extract-binding/single 'old-password bindings)]
+          [new-pass-1 (extract-binding/single 'new-password-1 bindings)]
+          [new-pass-2 (extract-binding/single 'new-password-2 bindings)])
+
+     (print (hashpass old-pass))
+     (print (user-passhash curruser))
+     (user->db! db
+                (user (user-id curruser)
+                      (user-username curruser)
+                      (if (non-empty-string? email) email (user-email curruser))
+                      profile
+                      (if (and (valid-password? old-pass (user-passhash curruser))
+                               (equal? new-pass-1 new-pass-2))
+                          (hashpass new-pass-1)
+                          (user-passhash curruser)))))
+     (redirect-to "/account"))
+         
+     
+
 
 
 ; # PAGE RESPONSE FUNCTIONS
@@ -296,26 +323,28 @@
    `(div ((class "items") (style "margin-bottom: 70px;"))
          (div ((style "padding-top: 25px; text-align: left"))
               (h3 ,(string-append "Account Information for '" (user-username u) "'"))
-              (br)
-              "Change email:"(br)(br)
-              (input ((class "our-input") (value ,(user-email u)) (type "email") (name "email")))
-              (br)(br)
-              "Change profile:"(br)(br)
-              (textarea ((width "fill")
-                         (placeholder "body")
-                         (style "margin-bottom: 30px")
-                         (class "our-input submit-input submit-text-area"))
-                        ,(user-profile u))
-              (br)
-              "Change password:"(br)(br)
-              (input ((class "our-input") (type "password") (placeholder "old password") (name "old-password")))
-              (br)
-              (input ((class "our-input") (type "password") (placeholder "new password") (name "new-password-1")))
-              (br)
-              (input ((class "our-input") (type "password") (placeholder "re-type new password") (name "new-password-2")))
-              (br)
-              (button ((class "our-button")) "save changes")
-              (button ((class "our-button") (style "background-color: brown")) "delete account"))))))
+              (form ((action "/update-user-information"))
+                    (br)
+                    "Change email:"(br)(br)
+                    (input ((class "our-input") (value ,(user-email u)) (type "email") (name "email")))
+                    (br)(br)
+                    "Change profile:"(br)(br)
+                    (textarea ((width "fill")
+                               (placeholder "body")
+                               (style "margin-bottom: 30px")
+                               (class "our-input submit-input submit-text-area")
+                               (name "profile"))
+                               ,(user-profile u))
+                    (br)
+                    "Change password:"(br)(br)
+                    (input ((class "our-input") (type "password") (placeholder "old password") (name "old-password")))
+                    (br)
+                    (input ((class "our-input") (type "password") (placeholder "new password") (name "new-password-1")))
+                    (br)
+                    (input ((class "our-input") (type "password") (placeholder "re-type new password") (name "new-password-2")))
+                    (br)
+                    (button ((class "our-button")) "save changes")
+                    (a ((href "/delete-account"))(button ((class "our-button") (style "background-color: brown")) "delete account"))))))))
               
    
 ; consume request and return the post being requested along with comments
@@ -426,6 +455,7 @@
    [("add-comment" (integer-arg)) (logreq add-comment)]
    [("vote") (logreq submit-vote)]
    [("reply-comment") (logreq reply-comment)]
+   [("update-user-information") (logreq update-user)]
 
    ; Login management
    [("login") login-page]

@@ -205,8 +205,7 @@
 
 ; Update user in database
 (define (user->db! db x)
-  (query-exec db "UPDATE ? SET username = ?, email = ?, profile = ?, passhash = ? WHERE id = ?"
-              "users"
+  (query-exec db "UPDATE users SET username = ?, email = ?, profile = ?, passhash = ? WHERE id = ?;"
               (user-username x)
               (user-email x)
               (user-profile x)

@@ -20,6 +20,11 @@
 (define (hashpass p)
   (pwhash '(pbkdf2 hmac sha256) (string->bytes/utf-8 p) '((iterations 100000))))
 
+; Validate given password
+(define (valid-password? password hash)
+  (with-handlers ([exn:all (lambda (v) #f)])
+             (pwhash-verify #f (string->bytes/utf-8 password) hash)))
+
 ; Catches all exceptions
 (define exn:all (lambda (v) #t))
 
@@ -61,9 +66,7 @@
       (if [and
            curr_user
            (non-empty-string? password)
-           (with-handlers ([exn:all (lambda (v) #f)])
-             (pwhash-verify #f (string->bytes/utf-8 password)
-                           (user-passhash curr_user)))]
+           (valid-password? password (user-passhash curr_user))]
           (let ([sid (gen-sid)])
             (begin (session->db db (session sid
                                             (user-id curr_user)
