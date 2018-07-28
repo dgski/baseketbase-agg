@@ -1,8 +1,11 @@
 #lang racket
 
 (require db
-         web-server/servlet)
+         web-server/servlet
+         threading)
 
+; # CONSTANTS
+(define POST_DECAY_RATE (expt 0.5 (/ 1 86400)))
 (define 2WEEKS 1209600)
 
 
@@ -119,6 +122,26 @@
     (query-exec db "UPDATE posts SET numcom = ? WHERE id = ?"
                 (add1 (post-numcom currpost))
                 pid)))
+
+; Calculate the heat level of the post
+(define (calc-post-heat x)
+  (* (post-score x) (expt POST_DECAY_RATE (- (current-datetime) (post-datetime x)))))
+
+
+; consume a string and return list
+(define (get-sorted-posts db type)
+  (let ([posts (get-posts db)])
+    (cond
+      [(equal? type "hot")
+       (~> posts
+           (map (lambda (x) (cons (calc-post-heat x) x)) _)
+           (sort _ (lambda (a b) (if (< (post-score (cdr a)) (post-score (cdr b))) #f #t)))
+           (map (lambda (x) (cdr x)) _))]
+      [(equal? type "top")
+       (sort posts (lambda (a b) (if (< (post-score a) (post-score b)) #f #t)))]
+      [(equal? type "new")
+       (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))]))
+  )
        
 ;# COMMENTS
 

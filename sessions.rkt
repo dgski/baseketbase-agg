@@ -28,7 +28,6 @@
 ; Catches all exceptions
 (define exn:all (lambda (v) #t))
 
-
 ; Generate session_id
 (define (gen-sid)
   (foldr (lambda (next prev) (string-append prev (number->string next 16))) "" (for/list ((i 32)) (add1 (random 256)))))
@@ -76,7 +75,7 @@
                    (redirect-to "/" #:headers (list (cookie->header (make-id-cookie "sid"
                                                                                     (make-secret-salt/file "salt.key")
                                                                                     sid))))))
-      (redirect-to "login")))))
+          (redirect-to "login")))))
 
 ; receives request and db connection and attemps to log user out
 ; request, db -> redirect

@@ -1,20 +1,17 @@
 #lang web-server
 
-; # REQUIRE
+; # REQUIRE MODULES
 (require web-server/servlet
          web-server/servlet-env
          racket/port
-         racket/date
-         threading
-         )
+         racket/date)
 
 ; # REQUIRE LOCAL
 (require "views.rkt")
 (require "model.rkt")
 (require "sessions.rkt")
 
-; # CONSTANT
-(define POST_DECAY_RATE (expt 0.5 (/ 1 86400)))
+
 
 ; # CREATE DATABASE CONNECTION
 (define db
@@ -25,134 +22,43 @@
 
 ; # RENDER FUNCTIONS
 
-; render website heading
-(define (render-heading sorter? order links)
-  `(div ((class "heading"))
-       (div ((class "heading-holder"))
-            (div ((class "heading-helper"))
-                 (div ((class "heading-text"))
-                      (a ((class "heading-link-main") (href "/"))
-                         "basket" (span ((class "base")) ".") "base"))
-                 ,(if sorter? `(div ((class "heading-sorter")) ,@(render-sorter order)) "")
-                 (div ((class "heading-links"))
-                      (div ((style "width: 100%; text-align: right"))
-                           ,@(map (lambda (x) x) links)))))))
+; consume a comment and a depth and return a X-expr representing it and all of it's children
+; comment number -> X-expr
+(define (render-comment x depth render-reply)
+  (let ([current (car x)]
+        [replies (cadr x)])
+    `(div ((class"comment" ))
+          (div ((class "comment-aligner"))
+               (div ((class "comment-content"))
+                    (div ((class "comment-username")) (span ((class "voters"))
+                                                            (span ((class "voter")) "▼")
+                                                            (span ((class "voter")) "▲"))
+                         ,(uid->db->string db (comment-uid current))
+                         ,(if render-reply `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid="
+                                                                                           (number->string (comment-id current))
+                                                                                           "&pid="
+                                                                                           (number->string (comment-pid current))))) "reply") ""))
+                    (div ((class "comment-body")) ,(comment-body current)))
+               (div ((class "comment-datetime"))
+                    (div ((class "datetime-container"))
+                         ,(date->string (seconds->date (comment-datetime current)) #t))))
+        
+          ,(if [> 4 depth] `(div ((class "comment-replies"))
+                                 ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply)) replies))
+               `(div ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply)) replies) )))))
 
-; render website heading for logged in user
-(define (render-logged-heading username sorter? order)
-  (render-heading sorter? order (append (map (lambda (x) `(a ((class "heading-link")
-                                                (href ,(string-append "/" (car x)))) ,(cadr x)))
-                               '(("submit" "submit")
-                                 ("about" "about")
-                                 ("inbox" "inbox")
-                                 ("account" "account")
-                                 ("do-logout" "sign out"))) `((b ((class "username"))
-                                                                 ,username)))))
-
-; render website heading for new user
-(define (render-less-heading sorter? order)
-  (render-heading sorter? order (map (lambda (x) `(a ((class "heading-link")
-                                                (href ,(string-append "/" (car x)))) ,(cadr x)))
-                               '(("submit" "submit")
-                                 ("about" "about")
-                                 ("login" "sign in")))))
-
-; render website footer
-(define (render-footer)
-  `(div ((class "footer"))
-             (div ((class "controls"))
-                  (a ((class "control-link") (href "prev")) "< prev")
-                  (a ((class "control-link") (href "next")) "next >"))))
-
-; render website sorter
-(define (render-sorter order)
-  (let ([hot (if (equal? order "hot") "sorter-link-active" "")]
-        [new (if (equal? order "new") "sorter-link-active" "")]
-        [top (if (equal? order "top") "sorter-link-active" "")])
-  `((a ((class ,(string-append "sorter-link" " " hot)) (href "/?sort=hot")) "hot")
-    (a ((class ,(string-append "sorter-link" " " new)) (href "/?sort=new")) "new")
-    (a ((class ,(string-append "sorter-link" " " top)) (href "/?sort=top")) "top"))))
-
-; render post voters
-(define (render-voters x)
-  `(div ((class "voters"))
-       (a ((class "voter-link")
-           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=up")))
-          (span ((class "voter")) "▲"))
-       (a ((class "voter-link")
-           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=downv")))
-          (span ((class "voter")) "▼"))))
-
-
-; consume item x and return X-expr representing data
-; item -> X-expr
-(define (render-post x)
-  `(div ((class "item"))
-        (div ((class "heat-level"))
-             (div ((class "heat-level-cont"))
-                  ,(render-voters x)
-                  ,(number->string (post-score x))))
-        (a ((class "item-link")(href ,(post-url x))) (div ((class "content"))
-             (div ((class "title")) ,(post-title x))
-             (div ((class "url-sample")) ,(post-url x))))
-        (div ((class "comments"))
-             (div ((class "comment-container"))
-                  (a ((class "comment-link")
-                      (href ,(string-append  "/post/" (number->string (post-id x)))))
-                     ,(string-append (number->string (post-numcom x)) " comments"))))))
-
-
-; Calculate the heat level of the post
-(define (calc-post-heat x)
-  (* (post-score x) (expt POST_DECAY_RATE (- (current-datetime) (post-datetime x)))))
-
-
-; consume a string and return list
-(define (get-sorted-posts db type)
-  (let ([posts (get-posts db)])
-    (cond
-      [(equal? type "hot")
-       (~> posts
-           (map (lambda (x) (cons (calc-post-heat x) x)) _)
-           (sort _ (lambda (a b) (if (< (post-score (cdr a)) (post-score (cdr b))) #f #t)))
-           (map (lambda (x) (cdr x)) _))]
-      [(equal? type "top")
-       (sort posts (lambda (a b) (if (< (post-score a) (post-score b)) #f #t)))]
-      [(equal? type "new")
-       (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))]))
-  )
-    
-
-; consume a list of items and return X-expr representing it
-; list of item -> X-expr
-(define (render-posts order)
-  (let ([posts (get-sorted-posts db order)])
-    `(div ((class "items"))
-        ,(render-top-posts (take posts 3))
-        ,@(map render-post (cdddr posts))
-        ,(render-footer))))
-
-; consume a list of three items and return an X-exp representing it
-; list of item -> X-expr
-(define (render-top-posts lat)
-  `(div ((class "top-items"))
-        (div ((class "top-item"))
-             (div ((class "img-crop") (style "height: 252px;")))
-             ,(render-post (list-ref lat 0)))
-        (div ((class "second-items"))
-             (div ((class "img-crop") (style "height: 104px")))
-             ,(render-post (list-ref lat 1))
-             (div ((class "img-crop") (style "height: 104px")))
-             ,(render-post (list-ref lat 2)))))
+; consume a list of comments and return a X-expr representing it
+(define (render-comments comms render-reply)
+    (map (lambda (x) (render-comment x 0 render-reply)) comms))
 
 ; consume a title and an X-expr and return a X-expr for a general page
 ; string X-expr -> X-expr
-(define (render-gnr-page r title content #:sorter [sorter #f] #:order [order "hot"])
+(define (render-gnr-page r page-title content #:sorter [sorter #f] #:order [order "hot"])
   (response/xexpr
    #:preamble #"<!doctype html>"
    `(html
      (head
-      (title "basketbase")
+      (title page-title)
       (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
      (body        
       ;,(render-heading #f)
@@ -160,35 +66,6 @@
            (render-logged-heading (user-username (current-user db r)) sorter order)
            (render-less-heading sorter order))
       ,content))))
-
-; consume a comment and a depth and return a X-expr representing it and all of it's children
-; comment number -> X-expr
-(define (render-comment x depth render-reply)
-  (let ([current (car x)]
-        [replies (cadr x)])
-  `(div ((class"comment" ))
-        (div ((class "comment-aligner"))
-             (div ((class "comment-content"))
-                  (div ((class "comment-username")) (span ((class "voters"))
-                                                          (span ((class "voter")) "▼")
-                                                          (span ((class "voter")) "▲"))
-                       ,(uid->db->string db (comment-uid current))
-                       ,(if render-reply `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid="
-                                                                      (number->string (comment-id current))
-                                                                      "&pid="
-                                                                      (number->string (comment-pid current))))) "reply") ""))
-                  (div ((class "comment-body")) ,(comment-body current)))
-             (div ((class "comment-datetime"))
-                  (div ((class "datetime-container"))
-                       ,(date->string (seconds->date (comment-datetime current)) #t))))
-        
-         ,(if [> 4 depth] `(div ((class "comment-replies"))
-         ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply)) replies))
-              `(div ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply)) replies) )))))
-
-; consume a list of comments and return a X-expr representing it
-(define (render-comments comms render-reply)
-    (map (lambda (x) (render-comment x 0 render-reply)) comms))
 
 ; # RECIEVING UPDATES
 
@@ -213,23 +90,20 @@
                              "2018-07-20"
                              body
                              replyto)))
-  (inc-comment-db db pid)
+  (inc-comment-db db pid) ; Increment number of comments
   (redirect-to (string-append "/post/" (number->string pid))))
 
 ; consume request return previous page
-
-
 (define (submit-vote r)
   (let* ([bindings (request-bindings r)]
          [type (extract-binding/single 'type bindings)]
          [pid (string->number (extract-binding/single 'id bindings))]
          [dir (extract-binding/single 'dir bindings)]
          [uid (user-id (current-user db r))])
-
     (cond
       [(equal? type "post")
        (if (user-voted-on-post db uid pid)
-            (redirect-to "/")
+           (redirect-to "/")
            (begin (vote->db db (vote 0
                                      uid
                                      pid
@@ -239,59 +113,34 @@
                   (alter-post-vote db pid dir) ; Change post score
                   (redirect-to "/")))])))
 
-; consume a request, return a page that allows replying to the given comment
-(define (reply-comment r)
-  (let* ([bindings (request-bindings r)]
-         [pid (extract-binding/single 'pid bindings)]
-         [cid (extract-binding/single 'cid bindings)])
-    (render-gnr-page r
-                     "Reply to:"
-                     `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
-                           (h3 "Replying to:")
-                           
-                           ,(render-comment (list(id->db->comment db cid) '()) 0 #f)
-                           (br)(br)
-                           (form ((class "reply-box")
-                                  (action ,(string-append "/add-comment/" pid)))
-                                 (div ((class "reply-box-textarea"))
-                                      (textarea ((placeholder "New Commment...")
-                                                 (class "our-input submit-input submit-text-area")
-                                                 (style "height: 50px;")
-                                                 (name "body")
-                                                 (active "")))
-                                      (input ((type "hidden") (name "replyto") (value ,cid))))
-                            
-                                 (div ((class "reply-box-button"))
-                                      (button ((class "our-button") (style "margin-right: 0px;")) "Post")))))))
+; Consume HTTP bindings and return a list of user-specific bindings
+; bindings -> list
+(define (extract-user-bindings bindings)
+  (for/list ([b '(email profile old-password new-password-1 new-password-2)])
+    (extract-binding/single b bindings)))
 
 ; consume a request filled with user's updated information, write to database and redirect
 ; request -> redirect
-
 (define (update-user r)
-   (let* ([curruser (current-user db r)]
-          [bindings (request-bindings r)]
-          [email (extract-binding/single 'email bindings)]
-          [profile (extract-binding/single 'profile bindings)]
-          [old-pass (extract-binding/single 'old-password bindings)]
-          [new-pass-1 (extract-binding/single 'new-password-1 bindings)]
-          [new-pass-2 (extract-binding/single 'new-password-2 bindings)])
-
-     (print (hashpass old-pass))
-     (print (user-passhash curruser))
-     (user->db! db
-                (user (user-id curruser)
-                      (user-username curruser)
-                      (if (non-empty-string? email) email (user-email curruser))
-                      profile
-                      (if (and (valid-password? old-pass (user-passhash curruser))
-                               (equal? new-pass-1 new-pass-2))
-                          (hashpass new-pass-1)
-                          (user-passhash curruser)))))
-     (redirect-to "/account"))
+   (match-let* ([curruser (current-user db r)]
+                [(list email profile old-pass new-pass-1 new-pass-2) (extract-user-bindings (request-bindings r))])
+     (user->db! db (user (user-id curruser)
+                         (user-username curruser)
+                         (if (non-empty-string? email) email (user-email curruser))
+                         profile
+                         (if (and (valid-password? old-pass (user-passhash curruser))
+                                  (equal? new-pass-1 new-pass-2))
+                             (hashpass new-pass-1)
+                             (user-passhash curruser)))))
+  (redirect-to "/account"))
          
-     
+;consumes request and logs user in
+(define (do-login r)
+  (attempt-user-login r db))
 
-
+; consumes request and logs user out
+(define (do-logout r)
+  (attempt-user-logout r db))
 
 ; # PAGE RESPONSE FUNCTIONS
 
@@ -305,15 +154,12 @@
          (p ((style "line-height: 1.5em"))
             "The page you requested does not exist..."))))
 
-
-
-
 ; consume request and return the front page
 ; request -> X-expr
 (define (front-page r)
   (let* ([bindings (request-bindings r)]
          [order (if (exists-binding? 'sort bindings) (extract-binding/single 'sort bindings) "hot")])
-    (render-gnr-page  #:order order #:sorter #t r "basketbase - Front Page" (render-posts order))))
+    (render-gnr-page  #:order order #:sorter #t r "basketbase - Front Page" (render-posts (get-sorted-posts db order) order))))
 
 ; consume request and return the about page
 ; request -> X-expr
@@ -419,19 +265,35 @@
                    (br)(br)
                    "Enjoy being a part of this community!")))))
 
-;consumes request and logs user in
-(define (do-login r)
-  (attempt-user-login r db))
-
-; consumes request and logs user out
-(define (do-logout r)
-  (attempt-user-logout r db))
-
 ; Login required
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function
 (define (logreq f)
   (lambda args (if (user-logged-in? db (car args)) (apply f args) (redirect-to "login"))))
+
+; consume a request, return a page that allows replying to the given comment
+(define (reply-comment r)
+  (let* ([bindings (request-bindings r)]
+         [pid (extract-binding/single 'pid bindings)]
+         [cid (extract-binding/single 'cid bindings)])
+    (render-gnr-page r "Reply to:" `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
+                                         (h3 "Replying to:")
+                                         ,(render-comment (list(id->db->comment db cid) '()) 0 #f)
+                                         (br)(br)
+                                         (form ((class "reply-box")
+                                                (action ,(string-append "/add-comment/" pid)))
+                                               (div ((class "reply-box-textarea"))
+                                                    (textarea ((placeholder "New Commment...")
+                                                               (class "our-input submit-input submit-text-area")
+                                                               (style "height: 50px;")
+                                                               (name "body")
+                                                               (active "")))
+                                                    (input ((type "hidden") (name "replyto") (value ,cid))))
+                                               (div ((class "reply-box-button"))
+                                                    (button ((class "our-button") (style "margin-right: 0px;")) "Post")))))))
+
+
+
 
 ; # STATIC FILE SERVING
 
@@ -449,7 +311,6 @@
 ; Consume request and return the right thing
 ; request -> X-expr
 (define (start r)
-  (write (request-bindings r)) (newline)
   (dispatch r))
 
 ; Request dispatching Table
