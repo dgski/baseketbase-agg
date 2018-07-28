@@ -295,6 +295,19 @@
 
 ; # PAGE RESPONSE FUNCTIONS
 
+; consume request and return the 'not found'
+; request -> X-expr
+(define (page-not-found r)
+  (render-gnr-page r
+   "Not Found"
+   `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
+         (h3 "Wrong Turn, Bro!")
+         (p ((style "line-height: 1.5em"))
+            "The page you requested does not exist..."))))
+
+
+
+
 ; consume request and return the front page
 ; request -> X-expr
 (define (front-page r)
@@ -343,8 +356,8 @@
                     (br)
                     (input ((class "our-input") (type "password") (placeholder "re-type new password") (name "new-password-2")))
                     (br)
-                    (button ((class "our-button")) "save changes")
-                    (a ((href "/delete-account"))(button ((class "our-button") (style "background-color: brown")) "delete account"))))))))
+                    (button ((class "our-button") (style "width: 125px")) "save changes"))(br)
+              (a ((href "/delete-account"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "delete account")))))))
               
    
 ; consume request and return the post being requested along with comments
@@ -465,7 +478,7 @@
    ; Utilities
    [("static" (string-arg)) serve-asset]
 
-   [else (lambda (x) (response/xexpr "WRONG TURN, BRO"))]))
+   [else page-not-found]))
 
 
 ; Start the server
