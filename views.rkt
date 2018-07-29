@@ -51,32 +51,34 @@
     (a ((class ,(string-append "sorter-link" " " top)) (href "/?sort=top")) "top"))))
 
 ; render post voters
-(define (render-voters x)
+(define (render-voters post vote)
   `(div ((class "voters"))
-       (a ((class "voter-link")
-           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=up")))
+       (a ((class ,(string-append "voter-link " (if (and vote (= (vote-dir vote) 1)) "voted" "")))
+           (href ,(string-append "/vote?type=post&id=" (number->string (post-id post)) "&dir=up")))
           (span ((class "voter")) "▲"))
-       (a ((class "voter-link")
-           (href ,(string-append "/vote?type=post&id=" (number->string (post-id x)) "&dir=downv")))
+       (a ((class ,(string-append "voter-link " (if (and vote (= (vote-dir vote) 0)) "voted" "")))
+           (href ,(string-append "/vote?type=post&id=" (number->string (post-id post)) "&dir=down")))
           (span ((class "voter")) "▼"))))
 
 
 ; consume item x and return X-expr representing data
 ; item -> X-expr
 (define (render-post x)
+  (let ([post (car x)]
+        [vote (cdr x)])
   `(div ((class "item"))
         (div ((class "heat-level"))
              (div ((class "heat-level-cont"))
-                  ,(render-voters x)
-                  ,(number->string (post-score x))))
-        (a ((class "item-link")(href ,(post-url x))) (div ((class "content"))
-             (div ((class "title")) ,(post-title x))
-             (div ((class "url-sample")) ,(post-url x))))
+                  ,(render-voters post vote)
+                  ,(number->string (post-score post))))
+        (a ((class "item-link")(href ,(post-url post))) (div ((class "content"))
+             (div ((class "title")) ,(post-title post))
+             (div ((class "url-sample")) ,(post-url post))))
         (div ((class "comments"))
              (div ((class "comment-container"))
                   (a ((class "comment-link")
-                      (href ,(string-append  "/post/" (number->string (post-id x)))))
-                     ,(string-append (number->string (post-numcom x)) " comments"))))))
+                      (href ,(string-append  "/post/" (number->string (post-id post)))))
+                     ,(string-append (number->string (post-numcom post)) " comments")))))))
 
 
 
@@ -85,10 +87,13 @@
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
 (define (render-posts posts order)
-    `(div ((class "items"))
-        ,(render-top-posts (take posts 3))
+  `(div
+    (div ((class "top-items-helper"))
+    ,(render-top-posts (take posts 3)))
+    (br)
+    (div ((class "items"))
         ,@(map render-post (cdddr posts))
-        ,(render-footer)))
+        ,(render-footer))))
 
 ; consume a list of three items and return an X-exp representing it
 ; list of item -> X-expr

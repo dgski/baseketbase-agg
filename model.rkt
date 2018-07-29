@@ -287,6 +287,16 @@
 ; Votes convenience struct
 (struct vote (id uid pid cid type dir))
 
+; consume db result and return vote
+(define (vector->vote x)
+  (vote (vector-ref x 0)
+             (vector-ref x 1)
+             (vector-ref x 2)
+             (vector-ref x 3)
+             (vector-ref x 4)
+             (vector-ref x 5)))
+
+
 ; consume vote and add to db
 (define (vote->db db x)
   (query-exec db "INSERT INTO votes (uid, pid, cid, type, dir) VALUES (?,?,?,?,?)"
@@ -296,10 +306,20 @@
               (vote-type x)
               (vote-dir x)))
 
+; delete vote from db
+(define (delete-vote db uid pid)
+  (query-exec db "DELETE FROM votes WHERE uid = ? AND pid = ?;" uid pid))
+
+
 ; consume uid, pid and return whether user voted on this post already
 (define (user-voted-on-post db uid pid)
   (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND pid = ?" uid pid)])
     (if (null? v) #f #t)))
+
+; consume uid, pid and return vote information
+(define (get-post-vote db uid pid)
+  (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND pid = ?" uid pid)])
+    (if (null? v) #f (vector->vote (car v)))))
 
 
 

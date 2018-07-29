@@ -58,7 +58,7 @@
    #:preamble #"<!doctype html>"
    `(html
      (head
-      (title page-title)
+      (title ,page-title)
       (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
      (body        
       ;,(render-heading #f)
@@ -103,15 +103,39 @@
     (cond
       [(equal? type "post")
        (if (user-voted-on-post db uid pid)
-           (redirect-to "/")
+           (begin (let ([v (get-post-vote db uid pid)])
+                    (delete-vote db uid pid)
+                    (cond
+                      [(and (= (vote-dir v) 1) (equal? dir "up"))
+                       (alter-post-vote db pid "down")]
+                      [(and (= (vote-dir v) 1) (equal? dir "down"))
+                       (alter-post-vote db pid "down")
+                       (alter-post-vote db pid "down")
+                       (vote->db db (vote 0
+                                     uid
+                                     pid
+                                     -1
+                                     0 ;post
+                                     (if (equal? dir "up") 1 0)))]
+                      [(and (= (vote-dir v) 0) (equal? dir "up"))
+                       (alter-post-vote db pid "up")
+                       (alter-post-vote db pid "up")
+                       (vote->db db (vote 0
+                                     uid
+                                     pid
+                                     -1
+                                     0 ;post
+                                     (if (equal? dir "up") 1 0)))]
+                      [(and (= (vote-dir v) 0) (equal? dir "down"))
+                       (alter-post-vote db pid "up")])))
            (begin (vote->db db (vote 0
                                      uid
                                      pid
                                      -1
                                      0 ;post
                                      (if (equal? dir "up") 1 0)))
-                  (alter-post-vote db pid dir) ; Change post score
-                  (redirect-to "/")))])))
+                  (alter-post-vote db pid dir)))]))
+  (redirect-to "/"))
 
 ; Consume HTTP bindings and return a list of user-specific bindings
 ; bindings -> list
@@ -158,8 +182,11 @@
 ; request -> X-expr
 (define (front-page r)
   (let* ([bindings (request-bindings r)]
-         [order (if (exists-binding? 'sort bindings) (extract-binding/single 'sort bindings) "hot")])
-    (render-gnr-page  #:order order #:sorter #t r "basketbase - Front Page" (render-posts (get-sorted-posts db order) order))))
+         [order (if (exists-binding? 'sort bindings) (extract-binding/single 'sort bindings) "hot")]
+         [u (if (user-logged-in? db r) (current-user db r) #f)])
+    (render-gnr-page  #:order order #:sorter #t r "basketbase - Front Page" (render-posts
+                                                                             (map (lambda (x)
+                                                                                    (cons x (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id x)) #f))) (get-sorted-posts db order)) order))))
 
 ; consume request and return the about page
 ; request -> X-expr
@@ -209,11 +236,12 @@
 ; consume request and return the post being requested along with comments
 ; request -> X-expr
 (define (post-page r id)
-  (let ([render-reply (user-logged-in? db r)])
+  (let ([render-reply (user-logged-in? db r)]
+        [post (pid->db->post db id)])
     (render-gnr-page r
                      "Post Page"
                      `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-                           ,(render-post (pid->db->post db id))
+                           ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
                            (div ((class "comment-box"))
                                 ,(if (user-logged-in? db r)
                                      `(form ((class "reply-box")

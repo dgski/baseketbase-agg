@@ -9,15 +9,19 @@ body {
 .heading {
     background-color: white;
     text-align: center;
-    /*position: fixed;*/
+    /*
+    position: fixed;
+    padding-bottom: 20px;*/
+
     width: 100%;
-    margin-top: 10px;
+    padding-top: 10px;
+
 
 }
 
 .heading-holder {
     
-    width: 800px;
+    width: 700px;
     text-align: left;
     display: inline-block;
     flex: 1 auto;
@@ -96,7 +100,7 @@ body {
 .items {
     font-size: 14px;
     display: inline-block;
-    width: 800px;
+    width: 700px;
     /*margin-top: 65px;*/
 
 }
@@ -222,6 +226,10 @@ body {
 
 }
 
+.top-items-helper {
+    width: 900px;
+    display: inline-block;
+}
 
 .top-items {
     display: flex;
@@ -231,6 +239,7 @@ body {
     border-bottom-style: solid;*/
     padding-top: 35px;
     padding-bottom: 35px;
+    font-size: 14px;
 
 }
 
@@ -374,7 +383,6 @@ body {
     color: rgb(133, 140, 172);
     text-align: left;
     font-size: 12px;
-    width:
 }
 
 .voter:hover {
