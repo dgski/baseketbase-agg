@@ -227,7 +227,8 @@ body {
 }
 
 .top-items-helper {
-    width: 900px;
+    width: 80%;
+    max-width: 1000px;
     display: inline-block;
 }
 
@@ -245,7 +246,7 @@ body {
 
 .top-item {
     flex: 1 auto;
-    width: calc(50% + 44px);
+    width: calc(50% - 44px);
     padding: 44px;
     padding-left: 0px;
     padding-top: 0px;
@@ -272,8 +273,7 @@ body {
 .img-crop {
     overflow: hidden;
     background-color: rgb(21, 34, 75);
-    /*background: linear-gradient(black,navy);*/
-
+    background: linear-gradient(black,navy);
 }
 
 .text-item {
@@ -535,6 +535,12 @@ body {
     text-decoration: none;
     padding-left: 20px;
     padding-right: 15px;
+}
+
+.user-link {
+    color:rgb(133, 140, 172);
+    font-size: 12px;
+    text-decoration: none;
 }
 
 .reply-link:hover {

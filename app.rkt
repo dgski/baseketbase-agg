@@ -4,7 +4,8 @@
 (require web-server/servlet
          web-server/servlet-env
          racket/port
-         racket/date)
+         racket/date
+         threading)
 
 ; # REQUIRE LOCAL
 (require "views.rkt")
@@ -33,7 +34,9 @@
                     (div ((class "comment-username")) (span ((class "voters"))
                                                             (span ((class "voter")) "▼")
                                                             (span ((class "voter")) "▲"))
-                         ,(uid->db->string db (comment-uid current))
+                         (a ((class "user-link") (href ,(string-append "/user/" (number->string (comment-uid current)))))
+                            ,(uid->db->string db (comment-uid current)))
+                         
                          ,(if render-reply `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid="
                                                                                            (number->string (comment-id current))
                                                                                            "&pid="
@@ -320,6 +323,40 @@
                                                (div ((class "reply-box-button"))
                                                     (button ((class "our-button") (style "margin-right: 0px;")) "Post")))))))
 
+; consume a request, return a page that describes a user account
+(define (user-page r id)
+  (let ([user (id->db->user db id)]
+        [comments (~> (uid->db->comms db id)
+                      ((lambda (x) (if (< (length x) 5) x (take x 5))) _))]
+        [posts (~> (uid->db->posts db id)
+                      ((lambda (x) (if (< (length x) 5) x (take x 5))) _)
+                      (map (lambda (x)
+                             (cons x (if (user-logged-in? db r)
+                                         (get-post-vote db (user-id (current-user db r)) (post-id x))
+                                         #f))) _))])
+    (render-gnr-page r
+                     "User"
+                     `(div ((class "items"))
+                           (div ((class "userpage-holder"))
+                                (h3 ,(string-append "Profile for '" (user-username user) "'"))
+                                (p ((class "our-paragraph"))
+                                   ,(if (non-empty-string? (user-profile user))
+                                        (user-profile user)
+                                        "This user has not filled out their profile.")
+                                   (br)
+                                   (br)
+                                   #|(a ((href "/message"))
+                                      (button ((class "our-button")) "send a message"))|#
+                                   (a ((href "/report"))
+                                      (button ((class "our-button")) "report")))
+                                (h3 "Submissions")
+                                ,@(map render-post posts)
+                                ,(if (null? posts) "This user has not submitted any content yet." "")
+                                (div ((class "comment-box") (style "padding-top: 25px;"))
+                                     (h3 "Comments")
+                                     ,@(if (null? comments) "This user has not posted any comments yet." (render-comments comments #f)))
+                                )))))
+
 
 
 
@@ -351,6 +388,7 @@
    [("post" (integer-arg)) post-page]
    [("account") (logreq account-page)]
    [("submit-new-post") (logreq submit-post)]
+   [("user" (integer-arg)) user-page]
 
    ; Receiving Data
    [("submit") (logreq submit-page)]

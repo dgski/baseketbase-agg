@@ -99,7 +99,7 @@
 ; Get posts from db with uid
 ; -> list
 (define (uid->db->posts db uid)
-  (vector->post (query-rows db "SELECT * FROM posts WHERE uid = ?" uid) 0))
+  (map vector->post (query-rows db "SELECT * FROM posts WHERE uid = ?" uid)))
 
 ; Update the vote tallys for this post
 (define (alter-post-vote db id dir)
@@ -199,6 +199,11 @@
 (define (pid->db->comms db pid)
   (map (lambda (x)
          (list x (get-comment-replies db (comment-id x)))) (pid->db->toplvlcomms db pid)))
+
+; consume db and uid and return list of all comments by that user
+; db, string -> list
+(define (uid->db->comms db uid)
+  (map (lambda (x) (list (vector->comment x) '())) (query-rows db "SELECT * FROM comments WHERE uid = ?" uid)))
 
 ; Delete comment
 ; cid -> delete from db

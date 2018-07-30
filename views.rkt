@@ -21,7 +21,6 @@
                                                 (href ,(string-append "/" (car x)))) ,(cadr x)))
                                '(("submit" "submit")
                                  ("about" "about")
-                                 ("inbox" "inbox")
                                  ("account" "account")
                                  ("do-logout" "sign out"))) `((b ((class "username"))
                                                                  ,username)))))
