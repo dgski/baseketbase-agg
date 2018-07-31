@@ -210,6 +210,21 @@
 (define (delete-comment-db db cid)
   (query-exec "DELETE FROM comments WHERE cid = ?" cid))
 
+; Update the vote tallys for this comment
+(define (alter-comm-vote db id dir)
+  (let ([currcomm (id->db->comment db id)])
+    (cond
+      [(equal? dir "up")
+       (query-exec db "UPDATE comments SET pos = ?, score = ? WHERE id = ?"
+                   (add1 (comment-pos currcomm))
+                   (add1 (comment-score currcomm))
+                   id)]
+      [else
+       (query-exec db "UPDATE comments SET neg = ?, score = ? WHERE id = ?"
+                   (add1 (comment-neg currcomm))
+                   (sub1 (comment-score currcomm))
+                   id)])))
+
 
 ; # USERS
 
@@ -324,6 +339,16 @@
 ; consume uid, pid and return vote information
 (define (get-post-vote db uid pid)
   (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND pid = ?" uid pid)])
+    (if (null? v) #f (vector->vote (car v)))))
+
+; consume uid, pid and return whether user voted on this comment already
+(define (user-voted-on-comm? db uid cid)
+  (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND cid = ?" uid cid)])
+    (if (null? v) #f #t)))
+
+; consume uid, cid and return vote information
+(define (get-comm-vote db uid cid)
+  (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND cid = ?" uid cid)])
     (if (null? v) #f (vector->vote (car v)))))
 
 

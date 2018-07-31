@@ -31,9 +31,7 @@
     `(div ((class"comment" ))
           (div ((class "comment-aligner"))
                (div ((class "comment-content"))
-                    (div ((class "comment-username")) (span ((class "voters"))
-                                                            (span ((class "voter")) "▼")
-                                                            (span ((class "voter")) "▲"))
+                    (div ((class "comment-username")) ,(render-voters "comment" (comment-id current) (vote 0 0 0 0 0 1)) ; todo: change
                          (a ((class "user-link") (href ,(string-append "/user/" (number->string (comment-uid current)))))
                             ,(uid->db->string db (comment-uid current)))
                          
@@ -100,45 +98,81 @@
 (define (submit-vote r)
   (let* ([bindings (request-bindings r)]
          [type (extract-binding/single 'type bindings)]
-         [pid (string->number (extract-binding/single 'id bindings))]
+         [id (string->number (extract-binding/single 'id bindings))]
          [dir (extract-binding/single 'dir bindings)]
          [uid (user-id (current-user db r))])
     (cond
       [(equal? type "post")
-       (if (user-voted-on-post db uid pid)
-           (begin (let ([v (get-post-vote db uid pid)])
-                    (delete-vote db uid pid)
+       (if (user-voted-on-post db uid id)
+           (begin (let ([v (get-post-vote db uid id)])
+                    (delete-vote db uid id)
                     (cond
                       [(and (= (vote-dir v) 1) (equal? dir "up"))
-                       (alter-post-vote db pid "down")]
+                       (alter-post-vote db id "down")]
                       [(and (= (vote-dir v) 1) (equal? dir "down"))
-                       (alter-post-vote db pid "down")
-                       (alter-post-vote db pid "down")
+                       (alter-post-vote db id "down")
+                       (alter-post-vote db id "down")
                        (vote->db db (vote 0
-                                     uid
-                                     pid
-                                     -1
-                                     0 ;post
-                                     (if (equal? dir "up") 1 0)))]
+                                          uid
+                                          id
+                                          -1
+                                          0 ;post
+                                          (if (equal? dir "up") 1 0)))]
                       [(and (= (vote-dir v) 0) (equal? dir "up"))
-                       (alter-post-vote db pid "up")
-                       (alter-post-vote db pid "up")
+                       (alter-post-vote db id "up")
+                       (alter-post-vote db id "up")
                        (vote->db db (vote 0
-                                     uid
-                                     pid
-                                     -1
-                                     0 ;post
-                                     (if (equal? dir "up") 1 0)))]
+                                          uid
+                                          id
+                                          -1
+                                          0 ;post
+                                          (if (equal? dir "up") 1 0)))]
                       [(and (= (vote-dir v) 0) (equal? dir "down"))
-                       (alter-post-vote db pid "up")])))
+                       (alter-post-vote db id "up")])))
            (begin (vote->db db (vote 0
                                      uid
-                                     pid
+                                     id
                                      -1
                                      0 ;post
                                      (if (equal? dir "up") 1 0)))
-                  (alter-post-vote db pid dir)))]))
-  (redirect-to "/"))
+                  (alter-post-vote db id dir)))]
+      
+      [else
+       (if (user-voted-on-comm? db uid id)
+           (begin (let ([v (get-comm-vote db uid id)])
+                    (delete-vote db uid id)
+                    (cond
+                      [(and (= (vote-dir v) 1) (equal? dir "up"))
+                       (alter-comm-vote db id "down")]
+                      [(and (= (vote-dir v) 1) (equal? dir "down"))
+                       (alter-comm-vote db id "down")
+                       (alter-comm-vote db id "down")
+                       (vote->db db (vote 0
+                                          uid
+                                          -1
+                                          id
+                                          1 ;post
+                                          (if (equal? dir "up") 1 0)))]
+                      [(and (= (vote-dir v) 0) (equal? dir "up"))
+                       (alter-comm-vote db id "up")
+                       (alter-comm-vote db id "up")
+                       (vote->db db (vote 0
+                                          uid
+                                          -1
+                                          id
+                                          1 ;post
+                                          (if (equal? dir "up") 1 0)))]
+                      [(and (= (vote-dir v) 0) (equal? dir "down"))
+                       (alter-comm-vote db id "up")])))
+           (begin (vote->db db (vote 0
+                                     uid
+                                     -1
+                                     id
+                                     1 ;post
+                                     (if (equal? dir "up") 1 0)))
+                  (alter-comm-vote db id dir)))]
+      ))
+  (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))
 
 ; Consume HTTP bindings and return a list of user-specific bindings
 ; bindings -> list
@@ -376,6 +410,7 @@
 ; Consume request and return the right thing
 ; request -> X-expr
 (define (start r)
+  (print r)
   (dispatch r))
 
 ; Request dispatching Table

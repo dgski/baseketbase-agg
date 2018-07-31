@@ -50,13 +50,13 @@
     (a ((class ,(string-append "sorter-link" " " top)) (href "/?sort=top")) "top"))))
 
 ; render post voters
-(define (render-voters post vote)
-  `(div ((class "voters"))
+(define (render-voters type id vote)
+  `(span ((class "voters"))
        (a ((class ,(string-append "voter-link " (if (and vote (= (vote-dir vote) 1)) "voted" "")))
-           (href ,(string-append "/vote?type=post&id=" (number->string (post-id post)) "&dir=up")))
+           (href ,(string-append "/vote?type=" type "&id=" (number->string id) "&dir=up")))
           (span ((class "voter")) "▲"))
        (a ((class ,(string-append "voter-link " (if (and vote (= (vote-dir vote) 0)) "voted" "")))
-           (href ,(string-append "/vote?type=post&id=" (number->string (post-id post)) "&dir=down")))
+           (href ,(string-append "/vote?type=" type "&id=" (number->string id) "&dir=down")))
           (span ((class "voter")) "▼"))))
 
 
@@ -68,7 +68,7 @@
   `(div ((class "item"))
         (div ((class "heat-level"))
              (div ((class "heat-level-cont"))
-                  ,(render-voters post vote)
+                  ,(render-voters "post" (post-id post) vote)
                   ,(number->string (post-score post))))
         (a ((class "item-link")(href ,(post-url post))) (div ((class "content"))
              (div ((class "title")) ,(post-title post))
