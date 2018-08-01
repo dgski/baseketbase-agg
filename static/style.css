@@ -560,3 +560,13 @@ body {
 .reply-box-button {
     text-align: right;
 }
+
+.username {
+    color: black;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.username:hover {
+    text-decoration: underline;
+}

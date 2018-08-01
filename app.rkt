@@ -25,13 +25,13 @@
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
 ; comment number -> X-expr
-(define (render-comment x depth render-reply)
+(define (render-comment x depth render-reply u)
   (let ([current (car x)]
         [replies (cadr x)])
     `(div ((class"comment" ))
           (div ((class "comment-aligner"))
                (div ((class "comment-content"))
-                    (div ((class "comment-username")) ,(render-voters "comment" (comment-id current) (vote 0 0 0 0 0 1)) ; todo: change
+                    (div ((class "comment-username")) ,(render-voters "comment" (comment-id current) (if u (get-comm-vote db (user-id u) (comment-id current)) #f)) ; todo: change
                          (a ((class "user-link") (href ,(string-append "/user/" (number->string (comment-uid current)))))
                             ,(uid->db->string db (comment-uid current)))
                          
@@ -45,12 +45,12 @@
                          ,(date->string (seconds->date (comment-datetime current)) #t))))
         
           ,(if [> 4 depth] `(div ((class "comment-replies"))
-                                 ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply)) replies))
-               `(div ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply)) replies) )))))
+                                 ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies))
+               `(div ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies) )))))
 
 ; consume a list of comments and return a X-expr representing it
-(define (render-comments comms render-reply)
-    (map (lambda (x) (render-comment x 0 render-reply)) comms))
+(define (render-comments comms render-reply u)
+    (map (lambda (x) (render-comment x 0 render-reply u)) comms))
 
 ; consume a title and an X-expr and return a X-expr for a general page
 ; string X-expr -> X-expr
@@ -64,7 +64,7 @@
      (body        
       ;,(render-heading #f)
       ,(if (user-logged-in? db r)
-           (render-logged-heading (user-username (current-user db r)) sorter order)
+           (render-logged-heading (current-user db r) sorter order)
            (render-less-heading sorter order))
       ,content))))
 
@@ -105,7 +105,7 @@
       [(equal? type "post")
        (if (user-voted-on-post db uid id)
            (begin (let ([v (get-post-vote db uid id)])
-                    (delete-vote db uid id)
+                    (pid-delete-vote db uid id)
                     (cond
                       [(and (= (vote-dir v) 1) (equal? dir "up"))
                        (alter-post-vote db id "down")]
@@ -129,6 +129,7 @@
                                           (if (equal? dir "up") 1 0)))]
                       [(and (= (vote-dir v) 0) (equal? dir "down"))
                        (alter-post-vote db id "up")])))
+           
            (begin (vote->db db (vote 0
                                      uid
                                      id
@@ -139,36 +140,37 @@
       
       [else
        (if (user-voted-on-comm? db uid id)
-           (begin (let ([v (get-comm-vote db uid id)])
-                    (delete-vote db uid id)
-                    (cond
-                      [(and (= (vote-dir v) 1) (equal? dir "up"))
-                       (alter-comm-vote db id "down")]
-                      [(and (= (vote-dir v) 1) (equal? dir "down"))
-                       (alter-comm-vote db id "down")
-                       (alter-comm-vote db id "down")
-                       (vote->db db (vote 0
-                                          uid
-                                          -1
-                                          id
-                                          1 ;post
-                                          (if (equal? dir "up") 1 0)))]
-                      [(and (= (vote-dir v) 0) (equal? dir "up"))
-                       (alter-comm-vote db id "up")
-                       (alter-comm-vote db id "up")
-                       (vote->db db (vote 0
-                                          uid
-                                          -1
-                                          id
-                                          1 ;post
-                                          (if (equal? dir "up") 1 0)))]
-                      [(and (= (vote-dir v) 0) (equal? dir "down"))
-                       (alter-comm-vote db id "up")])))
+           (begin  (let ([v (get-comm-vote db uid id)])
+                     (cid-delete-vote db uid id)
+                     (cond
+                       [(and (= (vote-dir v) 1) (equal? dir "up"))
+                        (begin (write "vote nulled") (newline) (alter-comm-vote db id "down"))]
+                       [(and (= (vote-dir v) 1) (equal? dir "down"))
+                        (alter-comm-vote db id "down")
+                        (alter-comm-vote db id "down")
+                        (vote->db db (vote 0
+                                           uid
+                                           -1
+                                           id
+                                           1 ;comment
+                                           (if (equal? dir "up") 1 0)))]
+                       [(and (= (vote-dir v) 0) (equal? dir "up"))
+                        (alter-comm-vote db id "up")
+                        (alter-comm-vote db id "up")
+                        (vote->db db (vote 0
+                                           uid
+                                           -1
+                                           id
+                                           1 ;comment
+                                           (if (equal? dir "up") 1 0)))]
+                       [(and (= (vote-dir v) 0) (equal? dir "down"))
+                        (alter-comm-vote db id "up")])))
+           
            (begin (vote->db db (vote 0
                                      uid
                                      -1
                                      id
-                                     1 ;post
+                                     1 ;comment
                                      (if (equal? dir "up") 1 0)))
                   (alter-comm-vote db id dir)))]
       ))
@@ -290,7 +292,7 @@
                                                             (name "body"))))
                                             (div ((class "reply-box-button"))
                                                  (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
-                           ,@(render-comments (pid->db->comms db id) render-reply)))))
+                           ,@(render-comments (pid->db->hotcomms db id) render-reply (if (user-logged-in? db r) (current-user db r) #f))))))
 
 ; consume request and return the submit page
 ; request -> X-expr
@@ -343,7 +345,7 @@
          [cid (extract-binding/single 'cid bindings)])
     (render-gnr-page r "Reply to:" `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
                                          (h3 "Replying to:")
-                                         ,(render-comment (list(id->db->comment db cid) '()) 0 #f)
+                                         ,(render-comment (list(id->db->comment db cid) '()) 0 #f (if (user-logged-in? db r) (current-user db r) #f))
                                          (br)(br)
                                          (form ((class "reply-box")
                                                 (action ,(string-append "/add-comment/" pid)))
@@ -388,7 +390,7 @@
                                 ,(if (null? posts) "This user has not submitted any content yet." "")
                                 (div ((class "comment-box") (style "padding-top: 25px;"))
                                      (h3 "Comments")
-                                     ,@(if (null? comments) "This user has not posted any comments yet." (render-comments comments #f)))
+                                     ,@(if (null? comments) "This user has not posted any comments yet." (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f))))
                                 )))))
 
 
@@ -410,7 +412,6 @@
 ; Consume request and return the right thing
 ; request -> X-expr
 (define (start r)
-  (print r)
   (dispatch r))
 
 ; Request dispatching Table

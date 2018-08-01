@@ -127,6 +127,10 @@
 (define (calc-post-heat x)
   (* (post-score x) (expt POST_DECAY_RATE (- (current-datetime) (post-datetime x)))))
 
+; Calculate the heat level of the comment
+(define (calc-comment-heat x)
+  (* (comment-score (car x)) (expt POST_DECAY_RATE (- (current-datetime) (comment-datetime (car x))))))
+
 
 ; consume a string and return list
 (define (get-sorted-posts db type)
@@ -199,6 +203,18 @@
 (define (pid->db->comms db pid)
   (map (lambda (x)
          (list x (get-comment-replies db (comment-id x)))) (pid->db->toplvlcomms db pid)))
+
+
+
+; Get all comments and their replies - sorted using hotness algorithm
+; string -> '((comment replies) (comment replies))
+(define (pid->db->hotcomms db pid)
+  (~> (pid->db->comms db pid)
+      (map (lambda (x) (cons (calc-comment-heat x) x)) _)
+      (sort _ (lambda (a b) (if (< (comment-score (cadr a)) (comment-score (cadr b))) #f #t)))
+      (map (lambda (x) (cdr x)) _)))
+
+
 
 ; consume db and uid and return list of all comments by that user
 ; db, string -> list
@@ -327,8 +343,13 @@
               (vote-dir x)))
 
 ; delete vote from db
-(define (delete-vote db uid pid)
+(define (pid-delete-vote db uid pid)
   (query-exec db "DELETE FROM votes WHERE uid = ? AND pid = ?;" uid pid))
+
+; delete vote from db
+(define (cid-delete-vote db uid cid)
+  (query-exec db "DELETE FROM votes WHERE uid = ? AND cid = ?;" uid cid))
+
 
 
 ; consume uid, pid and return whether user voted on this post already

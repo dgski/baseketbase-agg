@@ -16,14 +16,13 @@
                            ,@(map (lambda (x) x) links)))))))
 
 ; render website heading for logged in user
-(define (render-logged-heading username sorter? order)
+(define (render-logged-heading user sorter? order)
   (render-heading sorter? order (append (map (lambda (x) `(a ((class "heading-link")
                                                 (href ,(string-append "/" (car x)))) ,(cadr x)))
                                '(("submit" "submit")
                                  ("about" "about")
                                  ("account" "account")
-                                 ("do-logout" "sign out"))) `((b ((class "username"))
-                                                                 ,username)))))
+                                 ("do-logout" "sign out"))) `((a ((href ,(string-append "/user/" (number->string (user-id user)))) (class "username")) ,(user-username user)))   )))
 
 ; render website heading for new user
 (define (render-less-heading sorter? order)
