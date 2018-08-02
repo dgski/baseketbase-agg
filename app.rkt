@@ -31,18 +31,23 @@
     `(div ((class"comment" ))
           (div ((class "comment-aligner"))
                (div ((class "comment-content"))
-                    (div ((class "comment-username")) ,(render-voters "comment" (comment-id current) (if u (get-comm-vote db (user-id u) (comment-id current)) #f)) ; todo: change
+                    (div ((class "comment-username")) ,(render-voters "comment" (comment-id current) (if u (get-comm-vote db (user-id u) (comment-id current)) #f))
                          (a ((class "user-link") (href ,(string-append "/user/" (number->string (comment-uid current)))))
                             ,(uid->db->string db (comment-uid current)))
                          
                          ,(if render-reply `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid="
                                                                                            (number->string (comment-id current))
                                                                                            "&pid="
-                                                                                           (number->string (comment-pid current))))) "reply") ""))
+                                                                                           (number->string (comment-pid current))))) "reply") "")
+
+                         ,(if (and render-reply (= (comment-uid current) (user-id u)))
+                              `(a ((style "padding-left: 0px") (class "reply-link") (href ,(string-append "/delete-comment?cid="
+                                                                               (number->string (comment-id current))))) "delete") ""))
                     (div ((class "comment-body")) ,(comment-body current)))
                (div ((class "comment-datetime"))
                     (div ((class "datetime-container"))
-                         ,(date->string (seconds->date (comment-datetime current)) #t))))
+                         (a ((href ,(string-append "/comment/" (number->string (comment-id current)))) (class "comment-link"))
+                         ,(date->string (seconds->date (comment-datetime current)) #t)))))
         
           ,(if [> 4 depth] `(div ((class "comment-replies"))
                                  ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies))
@@ -393,6 +398,32 @@
                                      ,@(if (null? comments) "This user has not posted any comments yet." (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f))))
                                 )))))
 
+; consume request and cid, return X-expr representing comment page
+; request, int -> X-expr
+(define (comment-page r cid)
+  (let* ([currcomm (id->db->comment db cid)]
+         [currpost (pid->db->post db (comment-pid currcomm))]
+         [render-reply (user-logged-in? db r)])
+    (render-gnr-page r
+                     "Comment Page"
+                     `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
+                           ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
+                           (div ((style "padding-top: 50px"))
+                                (div ((style "padding-bottom: 20px; text-align: left"))
+                                     (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
+                                ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
+
+(define (delete-account r )
+  (render-gnr-page r "Delete Account" '(h1 "Deleting Account!")))
+
+(define (delete-comment r)
+  (let* ([bindings (request-bindings r)]
+         [cid (extract-binding/single 'cid bindings)]
+         [currcomm (id->db->comment db cid)])
+    (begin
+      (when (= (user-id (current-user db r)) (comment-uid currcomm)) (delete-comment-db db cid))
+      (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))))
+
 
 
 
@@ -425,6 +456,8 @@
    [("account") (logreq account-page)]
    [("submit-new-post") (logreq submit-post)]
    [("user" (integer-arg)) user-page]
+   [("comment" (integer-arg)) comment-page]
+   [("delete-account") (logreq delete-account)]
 
    ; Receiving Data
    [("submit") (logreq submit-page)]
@@ -432,6 +465,7 @@
    [("vote") (logreq submit-vote)]
    [("reply-comment") (logreq reply-comment)]
    [("update-user-information") (logreq update-user)]
+   [("delete-comment") (logreq delete-comment)]
 
    ; Login management
    [("login") login-page]

@@ -570,3 +570,11 @@ body {
 .username:hover {
     text-decoration: underline;
 }
+
+.comments-back {
+    font-weight: bold; font-size: 12px; text-decoration: none; color: black;
+}
+
+.comments-back:hover {
+    text-decoration: underline;
+}

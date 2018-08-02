@@ -224,7 +224,7 @@
 ; Delete comment
 ; cid -> delete from db
 (define (delete-comment-db db cid)
-  (query-exec "DELETE FROM comments WHERE cid = ?" cid))
+  (query-exec db "DELETE FROM comments WHERE id = ?" cid))
 
 ; Update the vote tallys for this comment
 (define (alter-comm-vote db id dir)
