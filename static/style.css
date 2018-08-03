@@ -274,6 +274,11 @@ body {
     overflow: hidden;
     background-color: rgb(21, 34, 75);
     background: linear-gradient(black,navy);
+    text-align: left;
+    color: white;
+    line-height: 1.5em;
+    font-size: 12px;
+    padding: 15px;
 }
 
 .text-item {
@@ -577,4 +582,11 @@ body {
 
 .comments-back:hover {
     text-decoration: underline;
+}
+
+.body-box {
+    padding: 5px;
+    padding-top: 10px;
+    text-align: left;
+    line-height: 1.5em;
 }

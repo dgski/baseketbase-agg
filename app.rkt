@@ -286,6 +286,7 @@
                      "Post Page"
                      `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
                            ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
+                           ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
                            (div ((class "comment-box"))
                                 ,(if (user-logged-in? db r)
                                      `(form ((class "reply-box")

@@ -98,12 +98,12 @@
 (define (render-top-posts lat)
   `(div ((class "top-items"))
         (div ((class "top-item"))
-             (div ((class "img-crop") (style "height: 252px;")))
+             (div ((class "img-crop") (style "height: 232px;")) ,(post-body (car (list-ref lat 0))))
              ,(render-post (list-ref lat 0)))
         (div ((class "second-items"))
-             (div ((class "img-crop") (style "height: 104px")))
+             (div ((class "img-crop") (style "height: 74px")) ,(post-body (car (list-ref lat 1))))
              ,(render-post (list-ref lat 1))
-             (div ((class "img-crop") (style "height: 104px")))
+             (div ((class "img-crop") (style "height: 74px")) ,(post-body (car (list-ref lat 2))))
              ,(render-post (list-ref lat 2)))))
 
 

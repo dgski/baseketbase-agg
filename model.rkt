@@ -51,7 +51,7 @@
         (current-datetime)
         (extract-binding/single 'title b)
         (extract-binding/single 'url b)
-        (extract-binding/single 'title b)
+        (extract-binding/single 'body b)
               0
               "front"))
 
