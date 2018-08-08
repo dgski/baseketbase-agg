@@ -13,7 +13,6 @@
 (require "sessions.rkt")
 
 
-
 ; # CREATE DATABASE CONNECTION
 (define db
   (sqlite3-connect #:database "baseketbase.db" #:mode 'create))
@@ -42,12 +41,12 @@
 
                          ,(if (and render-reply (= (comment-uid current) (user-id u)))
                               `(a ((style "padding-left: 0px") (class "reply-link") (href ,(string-append "/delete-comment?cid="
-                                                                               (number->string (comment-id current))))) "delete") ""))
+                                                                                                          (number->string (comment-id current))))) "delete") ""))
                     (div ((class "comment-body")) ,(comment-body current)))
                (div ((class "comment-datetime"))
                     (div ((class "datetime-container"))
                          (a ((href ,(string-append "/comment/" (number->string (comment-id current)))) (class "comment-link"))
-                         ,(date->string (seconds->date (comment-datetime current)) #t)))))
+                            ,(date->string (seconds->date (comment-datetime current)) #t)))))
         
           ,(if [> 4 depth] `(div ((class "comment-replies"))
                                  ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies))
@@ -62,16 +61,15 @@
 (define (render-gnr-page r page-title content #:sorter [sorter #f] #:order [order "hot"])
   (response/xexpr
    #:preamble #"<!doctype html>"
-   `(html
-     (head
-      (title ,page-title)
-      (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
-     (body        
-      ;,(render-heading #f)
-      ,(if (user-logged-in? db r)
-           (render-logged-heading (current-user db r) sorter order)
-           (render-less-heading sorter order))
-      ,content))))
+   `(html (head (title ,page-title)
+                (link ((rel "stylesheet")
+                       (type "text/css")
+                       (href "/static/style.css"))))
+          (body        
+           ,(if (user-logged-in? db r)
+                (render-logged-heading (current-user db r) sorter order)
+                (render-less-heading sorter order))
+           ,content))))
 
 ; # RECIEVING UPDATES
 
@@ -109,76 +107,38 @@
     (cond
       [(equal? type "post")
        (if (user-voted-on-post db uid id)
-           (begin (let ([v (get-post-vote db uid id)])
-                    (pid-delete-vote db uid id)
-                    (cond
-                      [(and (= (vote-dir v) 1) (equal? dir "up"))
-                       (alter-post-vote db id "down")]
-                      [(and (= (vote-dir v) 1) (equal? dir "down"))
-                       (alter-post-vote db id "down")
-                       (alter-post-vote db id "down")
-                       (vote->db db (vote 0
-                                          uid
-                                          id
-                                          -1
-                                          0 ;post
-                                          (if (equal? dir "up") 1 0)))]
-                      [(and (= (vote-dir v) 0) (equal? dir "up"))
-                       (alter-post-vote db id "up")
-                       (alter-post-vote db id "up")
-                       (vote->db db (vote 0
-                                          uid
-                                          id
-                                          -1
-                                          0 ;post
-                                          (if (equal? dir "up") 1 0)))]
-                      [(and (= (vote-dir v) 0) (equal? dir "down"))
-                       (alter-post-vote db id "up")])))
-           
-           (begin (vote->db db (vote 0
-                                     uid
-                                     id
-                                     -1
-                                     0 ;post
-                                     (if (equal? dir "up") 1 0)))
+           (let ([v (get-post-vote db uid id)])
+             (pid-delete-vote db uid id)
+             (match (list (vote-dir v) dir)
+               [(list 1 "up")
+                (alter-post-vote db id "down")]
+               [(list 1 "down")
+                (for ([i 2]) (alter-post-vote db id "down"))
+                (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN)))]
+               [(list 0 "up")
+                (for ([i 2]) (alter-post-vote db id "up"))
+                (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN)))]
+               [(list 0 "down")
+                (alter-post-vote db id "up")]))
+           (begin (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN))) ; New Vote
                   (alter-post-vote db id dir)))]
-      
       [else
        (if (user-voted-on-comm? db uid id)
-           (begin  (let ([v (get-comm-vote db uid id)])
-                     (cid-delete-vote db uid id)
-                     (cond
-                       [(and (= (vote-dir v) 1) (equal? dir "up"))
-                        (begin (write "vote nulled") (newline) (alter-comm-vote db id "down"))]
-                       [(and (= (vote-dir v) 1) (equal? dir "down"))
-                        (alter-comm-vote db id "down")
-                        (alter-comm-vote db id "down")
-                        (vote->db db (vote 0
-                                           uid
-                                           -1
-                                           id
-                                           1 ;comment
-                                           (if (equal? dir "up") 1 0)))]
-                       [(and (= (vote-dir v) 0) (equal? dir "up"))
-                        (alter-comm-vote db id "up")
-                        (alter-comm-vote db id "up")
-                        (vote->db db (vote 0
-                                           uid
-                                           -1
-                                           id
-                                           1 ;comment
-                                           (if (equal? dir "up") 1 0)))]
-                       [(and (= (vote-dir v) 0) (equal? dir "down"))
-                        (alter-comm-vote db id "up")])))
-           
-           (begin (vote->db db (vote 0
-                                     uid
-                                     -1
-                                     id
-                                     1 ;comment
-                                     (if (equal? dir "up") 1 0)))
-                  (alter-comm-vote db id dir)))]
-      ))
+           (let ([v (get-comm-vote db uid id)])
+             (cid-delete-vote db uid id)
+             (match (list (vote-dir v) dir)
+               [(list 1 "up")
+                (alter-comm-vote db id "down")]
+               [(list 1 "down")
+                (for ([i 2]) (alter-comm-vote db id "down"))
+                (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN)))]
+               [(list 0 "up")
+                (for ([i 2]) (alter-comm-vote db id "up"))
+                (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN)))]
+               [(list 0 "down")
+                (alter-comm-vote db id "up")]))
+           (begin (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN))) ; New Vote
+                  (alter-post-vote db id dir)))]))
   (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))
 
 ; Consume HTTP bindings and return a list of user-specific bindings
@@ -190,16 +150,16 @@
 ; consume a request filled with user's updated information, write to database and redirect
 ; request -> redirect
 (define (update-user r)
-   (match-let* ([curruser (current-user db r)]
-                [(list email profile old-pass new-pass-1 new-pass-2) (extract-user-bindings (request-bindings r))])
-     (user->db! db (user (user-id curruser)
-                         (user-username curruser)
-                         (if (non-empty-string? email) email (user-email curruser))
-                         profile
-                         (if (and (valid-password? old-pass (user-passhash curruser))
-                                  (equal? new-pass-1 new-pass-2))
-                             (hashpass new-pass-1)
-                             (user-passhash curruser)))))
+  (match-let* ([curruser (current-user db r)]
+               [(list email profile old-pass new-pass-1 new-pass-2) (extract-user-bindings (request-bindings r))])
+    (user->db! db (user (user-id curruser)
+                        (user-username curruser)
+                        (if (non-empty-string? email) email (user-email curruser))
+                        profile
+                        (if (and (valid-password? old-pass (user-passhash curruser))
+                                 (equal? new-pass-1 new-pass-2))
+                            (hashpass new-pass-1)
+                            (user-passhash curruser)))))
   (redirect-to "/account"))
          
 ;consumes request and logs user in
@@ -435,8 +395,8 @@
 ; Future : make sure that MIME type is correct!!!!!
 (define (serve-asset r f)
  (response 200 #"OK" 0 #"text/css" empty (lambda (op)
-(with-input-from-file (string-append "static/" f) (lambda () (copy-port
-(current-input-port) op))))))
+                                           (with-input-from-file (string-append "static/" f)
+                                             (lambda () (copy-port (current-input-port) op))))))
 
 
 ; # REQUEST DISPATCHING

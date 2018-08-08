@@ -14,14 +14,14 @@
 ; consumes lat of pairs and return a string representing a column
 ; list of lists -> string
 (define (create-col lat)
-    (cond
-      ((null? lat) "")
-      (else
-        (string-append (car (car lat)) 
-                       " " 
-                       (car (cdr (car lat))) 
-                       ((lambda (lat) (if (null? lat) "" ", ")) (cdr lat)) 
-                       (create-col (cdr lat))))))
+  (cond
+    ((null? lat) "")
+    (else
+     (string-append (car (car lat)) 
+                    " " 
+                    (car (cdr (car lat))) 
+                    ((lambda (lat) (if (null? lat) "" ", ")) (cdr lat)) 
+                    (create-col (cdr lat))))))
 
 
 
@@ -52,8 +52,8 @@
         (extract-binding/single 'title b)
         (extract-binding/single 'url b)
         (extract-binding/single 'body b)
-              0
-              "front"))
+        0
+        "front"))
 
 ; consume database and post add to db
 ; db, post -> into db
@@ -139,7 +139,10 @@
       [(equal? type "hot")
        (~> posts
            (map (lambda (x) (cons (calc-post-heat x) x)) _)
-           (sort _ (lambda (a b) (if (< (post-score (cdr a)) (post-score (cdr b))) #f #t)))
+           (sort _ (lambda (a b)
+                     (if (< (post-score (cdr a)) (post-score (cdr b)))
+                         #f
+                         #t)))
            (map (lambda (x) (cdr x)) _))]
       [(equal? type "top")
        (sort posts (lambda (a b) (if (< (post-score a) (post-score b)) #f #t)))]
@@ -323,14 +326,19 @@
 ; Votes convenience struct
 (struct vote (id uid pid cid type dir))
 
+(define POST 0)
+(define COMMENT 1)
+(define UP 1)
+(define DOWN 0)
+
 ; consume db result and return vote
 (define (vector->vote x)
   (vote (vector-ref x 0)
-             (vector-ref x 1)
-             (vector-ref x 2)
-             (vector-ref x 3)
-             (vector-ref x 4)
-             (vector-ref x 5)))
+        (vector-ref x 1)
+        (vector-ref x 2)
+        (vector-ref x 3)
+        (vector-ref x 4)
+        (vector-ref x 5)))
 
 
 ; consume vote and add to db
@@ -349,8 +357,6 @@
 ; delete vote from db
 (define (cid-delete-vote db uid cid)
   (query-exec db "DELETE FROM votes WHERE uid = ? AND cid = ?;" uid cid))
-
-
 
 ; consume uid, pid and return whether user voted on this post already
 (define (user-voted-on-post db uid pid)

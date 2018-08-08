@@ -98,26 +98,6 @@
                            ))
 (map (lambda (x) (post->db our_db x)) sample-posts)
 
-#|
-(define sample-posts (list (post 0 0 999 234 765 0 "Incredible Sights" "Bill Thompson" "" 671 "front")
-                           (post 0 0 700 234 66 0 "Castles" "http://discover.com" "" 9 "front")
-                           (post 0 0 499 234 66 0 "Nothing" "Bill Hulio" "" 900 "front")
-                           (post 0 0 234 23 66 0 "Apple's New iPhone is Triangular" "http://apple.com" "" 785 "front")
-                           (post 0 0 580 234 66 0 "Some People still don't know this fact" "http://wikipedia.org" "" 230 "front")
-                           (post 0 0 876 0 876 0 "The Artic Ocean at Sundown" "http://nationalgeographic.com" "" 1237 "front")
-                           (post 0 0 43 0 43 0 "Does anyone need a job in Belfast?" "reginald_papa" "" 14 "front")
-                           (post 0 0 77 0 876 0 "The Truth Behind Medicine" "http://popularscience.com" "" 45 "front")
-                           (post 0 0 11 0 876 0 "Stoic Philosophy" "http://medium.com" "" 90 "front")
-                           (post 0 0 1002 0 876 0 "We Need Biking More than Ever" "http://nytimes.com" "" 1003 "front")
-                           (post 0 0 300 0 876 0 "Minimalism: Start Guide" "http://medium.com" "" 55 "front")
-                           (post 0 0 109 0 876 0 "Avengers: Infinity War - HISHE" "http://youtube.com" "" 77 "front")
-                           (post 0 0 10 0 876 0 "When Life Seems like too much.." "http://basket.base" "" 5 "front")
-                           (post 0 0 54 0 876 0 "Top Museums, Rome - Pictures" "http://instagram.com" "" 8 "front")
-                           ))
-(map (lambda (x) (post->db our_db x)) sample-posts)
-|#
-
-
 ; Add Sample comments
 (comment->db our_db (comment 1 2 1 3 4 5 1000 "This is a top level comment" -1))
 (comment->db our_db (comment 1 2 1 3 4 5 1000 "This is a reply" 1))
@@ -125,7 +105,6 @@
 (comment->db our_db (comment 1 2 1 3 4 5 1000 "Third level down." 2))
 
 
-
-
+; Add Sample users
 (user->db our_db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234")))
 (user->db our_db (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx"))

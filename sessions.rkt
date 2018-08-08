@@ -23,7 +23,7 @@
 ; Validate given password
 (define (valid-password? password hash)
   (with-handlers ([exn:all (lambda (v) #f)])
-             (pwhash-verify #f (string->bytes/utf-8 password) hash)))
+    (pwhash-verify #f (string->bytes/utf-8 password) hash)))
 
 ; Catches all exceptions
 (define exn:all (lambda (v) #t))
@@ -42,6 +42,7 @@
   (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
 
 ; consumes request and determines whether request contains valid active session
+; Checks whether session exists in db, whether it has not expired yet, and whether ip and user-agent match
 ; request -> bool
 (define (user-logged-in? db r)
   (let ([session_id (parse-session-info r)])
@@ -79,7 +80,6 @@
 
 ; receives request and db connection and attemps to log user out
 ; request, db -> redirect
-
 (define (attempt-user-logout r db)
   (delete-session-db db (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
   (redirect-to "/" #:headers (list (cookie->header (logout-id-cookie "sid")))))
