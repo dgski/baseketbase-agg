@@ -97,6 +97,25 @@
   (inc-comment-db db pid) ; Increment number of comments
   (redirect-to (string-append "/post/" (number->string pid))))
 
+
+
+
+
+(define (handle-vote-change v dir id uid alter-vote new-vote-func)
+  (match (list (vote-dir v) dir)
+               [(list 1 "up")
+                (alter-vote db id "down")]
+               [(list 1 "down")
+                (for ([i 2]) (alter-vote db id "down"))
+                (new-vote-func)]
+               [(list 0 "up")
+                (for ([i 2]) (alter-vote db id "up"))
+                (new-vote-func)]
+               [(list 0 "down")
+                (alter-vote db id "up")]))
+
+
+
 ; consume request return previous page
 (define (submit-vote r)
   (let* ([bindings (request-bindings r)]
@@ -109,34 +128,14 @@
        (if (user-voted-on-post db uid id)
            (let ([v (get-post-vote db uid id)])
              (pid-delete-vote db uid id)
-             (match (list (vote-dir v) dir)
-               [(list 1 "up")
-                (alter-post-vote db id "down")]
-               [(list 1 "down")
-                (for ([i 2]) (alter-post-vote db id "down"))
-                (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN)))]
-               [(list 0 "up")
-                (for ([i 2]) (alter-post-vote db id "up"))
-                (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN)))]
-               [(list 0 "down")
-                (alter-post-vote db id "up")]))
+             (handle-vote-change v dir id uid alter-post-vote (lambda () (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN))))))
            (begin (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN))) ; New Vote
                   (alter-post-vote db id dir)))]
       [else
        (if (user-voted-on-comm? db uid id)
            (let ([v (get-comm-vote db uid id)])
              (cid-delete-vote db uid id)
-             (match (list (vote-dir v) dir)
-               [(list 1 "up")
-                (alter-comm-vote db id "down")]
-               [(list 1 "down")
-                (for ([i 2]) (alter-comm-vote db id "down"))
-                (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN)))]
-               [(list 0 "up")
-                (for ([i 2]) (alter-comm-vote db id "up"))
-                (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN)))]
-               [(list 0 "down")
-                (alter-comm-vote db id "up")]))
+             (handle-vote-change v dir id uid alter-comm-vote (lambda () (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN))))))
            (begin (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN))) ; New Vote
                   (alter-post-vote db id dir)))]))
   (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))
@@ -374,8 +373,18 @@
                                      (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
                                 ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
 
+; consume request, return page asking whether user wants to delete their account
+;
 (define (delete-account r )
-  (render-gnr-page r "Delete Account" '(h1 "Deleting Account!")))
+  (let ([u (current-user db r)])
+  (render-gnr-page r "Delete Account"
+                   `(div ((class "items"))
+                         (div ((class "userpage-holder"))
+                              (h3 ,(string-append "Deleting account '" (user-username u) "'"))
+                              (p ((class "our-paragraph"))
+                                 "Are you sure you want to delete this account?")
+                              (a ((href "/account"))(button ((class "our-button") (style "width: 125px")) "no"))
+                              (a ((href "/delete-account-now"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "yes")))))))
 
 (define (delete-comment r)
   (let* ([bindings (request-bindings r)]
