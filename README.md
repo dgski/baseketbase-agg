@@ -1,5 +1,4 @@
-# Basketbase 
-**News/Link Aggregation Platform**
+# News/Link Aggregation Platform 
 
 ![Screenshot](screenshot.png)
 
