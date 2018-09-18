@@ -97,24 +97,19 @@
   (inc-comment-db db pid) ; Increment number of comments
   (redirect-to (string-append "/post/" (number->string pid))))
 
-
-
-
-
+; change vote status in database
 (define (handle-vote-change v dir id uid alter-vote new-vote-func)
   (match (list (vote-dir v) dir)
-               [(list 1 "up")
-                (alter-vote db id "down")]
-               [(list 1 "down")
-                (for ([i 2]) (alter-vote db id "down"))
-                (new-vote-func)]
-               [(list 0 "up")
-                (for ([i 2]) (alter-vote db id "up"))
-                (new-vote-func)]
-               [(list 0 "down")
-                (alter-vote db id "up")]))
-
-
+    [(list 1 "up")
+     (alter-vote db id "down")]
+    [(list 1 "down")
+     (for ([i 2]) (alter-vote db id "down"))
+     (new-vote-func)]
+    [(list 0 "up")
+     (for ([i 2]) (alter-vote db id "up"))
+     (new-vote-func)]
+    [(list 0 "down")
+     (alter-vote db id "up")]))
 
 ; consume request return previous page
 (define (submit-vote r)
@@ -246,6 +241,17 @@
                      `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
                            ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
                            ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
+
+                           (div ((style "text-align: left; border-top-width: 1px; border-top-color: gainsboro; border-top-style: solid; padding: 5px; margin-top: 10px; font-size: 12px; color: #858cac"))
+                                "posted by "
+                                (a ((class "user-link") (href ,(string-append "/user/" (number->string (post-uid post))))) (b ,(uid->db->string db (post-uid post))))
+                                " on "
+                                ,(date->string (seconds->date (post-datetime post)) #t)
+                                
+                                ,(if (and (user-logged-in? db r) (equal? (user-id (current-user db r)) (post-uid post)))
+                                     `(a ((class "user-link") (style "float: right") (href ,(string-append "/delete-post?pid=" (number->string (post-id post))))) "delete")
+                                     ""))
+                           
                            (div ((class "comment-box"))
                                 ,(if (user-logged-in? db r)
                                      `(form ((class "reply-box")
@@ -330,11 +336,11 @@
         [comments (~> (uid->db->comms db id)
                       ((lambda (x) (if (< (length x) 5) x (take x 5))) _))]
         [posts (~> (uid->db->posts db id)
-                      ((lambda (x) (if (< (length x) 5) x (take x 5))) _)
-                      (map (lambda (x)
-                             (cons x (if (user-logged-in? db r)
-                                         (get-post-vote db (user-id (current-user db r)) (post-id x))
-                                         #f))) _))])
+                   ((lambda (x) (if (< (length x) 5) x (take x 5))) _)
+                   (map (lambda (x)
+                          (cons x (if (user-logged-in? db r)
+                                      (get-post-vote db (user-id (current-user db r)) (post-id x))
+                                      #f))) _))])
     (render-gnr-page r
                      "User"
                      `(div ((class "items"))
@@ -353,10 +359,9 @@
                                 (h3 "Submissions")
                                 ,@(map render-post posts)
                                 ,(if (null? posts) "This user has not submitted any content yet." "")
-                                (div ((class "comment-box") (style "padding-top: 25px;"))
+                               (div ((class "comment-box") (style "padding-top: 25px;"))
                                      (h3 "Comments")
-                                     ,@(if (null? comments) "This user has not posted any comments yet." (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f))))
-                                )))))
+                                     ,@(if (null? comments) `("This user has not posted any comments yet.") (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f)))))))))
 
 ; consume request and cid, return X-expr representing comment page
 ; request, int -> X-expr
@@ -393,6 +398,15 @@
     (begin
       (when (= (user-id (current-user db r)) (comment-uid currcomm)) (delete-comment-db db cid))
       (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))))
+
+
+(define (delete-post r)
+  (let* ([bindings (request-bindings r)]
+         [pid (extract-binding/single 'pid bindings)]
+         [currpost (pid->db->post db pid)])
+    (begin
+      (when (= (user-id (current-user db r)) (post-uid currpost)) (delete-post-db db pid))
+      (redirect-to "/"))))
 
 
 
@@ -436,6 +450,7 @@
    [("reply-comment") (logreq reply-comment)]
    [("update-user-information") (logreq update-user)]
    [("delete-comment") (logreq delete-comment)]
+   [("delete-post") (logreq delete-post)]
 
    ; Login management
    [("login") login-page]

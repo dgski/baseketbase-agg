@@ -86,11 +86,12 @@
 ; list of item -> X-expr
 (define (render-posts posts order)
   `(div
-    (div ((class "top-items-helper"))
-    ,(render-top-posts (take posts 3)))
+    ;(div ((class "top-items-helper"))
+    ;,(render-top-posts (take posts 3)))
+    (br)
     (br)
     (div ((class "items"))
-        ,@(map render-post (cdddr posts))
+        ,@(map render-post #|(cdddr posts)|# posts)
         ,(render-footer))))
 
 ; consume a list of three items and return an X-exp representing it

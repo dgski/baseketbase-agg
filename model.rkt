@@ -70,6 +70,11 @@
               (post-numcom x)
               (post-section x)))
 
+
+; consume database and post and delete post in database
+(define (delete-post-db db pid)
+  (query-exec db "DELETE FROM posts WHERE id = ?" pid))
+
 ; consumes db result vector and returns post
 ; db_result -> post
 (define (vector->post x)
@@ -135,8 +140,8 @@
 ; consume a string and return list
 (define (get-sorted-posts db type)
   (let ([posts (get-posts db)])
-    (cond
-      [(equal? type "hot")
+    (match type
+      ["hot"
        (~> posts
            (map (lambda (x) (cons (calc-post-heat x) x)) _)
            (sort _ (lambda (a b)
@@ -144,11 +149,10 @@
                          #f
                          #t)))
            (map (lambda (x) (cdr x)) _))]
-      [(equal? type "top")
+      ["top"
        (sort posts (lambda (a b) (if (< (post-score a) (post-score b)) #f #t)))]
-      [(equal? type "new")
-       (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))]))
-  )
+      ["new"
+       (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))])))
        
 ;# COMMENTS
 
