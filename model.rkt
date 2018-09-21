@@ -71,7 +71,7 @@
               (post-section x)))
 
 
-; consume database and post and delete post in database
+; consume database and post and delete post 
 (define (delete-post-db db pid)
   (query-exec db "DELETE FROM posts WHERE id = ?" pid))
 

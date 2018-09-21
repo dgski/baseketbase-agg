@@ -11,6 +11,8 @@
 (require "views.rkt")
 (require "model.rkt")
 (require "sessions.rkt")
+(require "utils.rkt")
+
 
 
 ; # CREATE DATABASE CONNECTION
@@ -46,7 +48,9 @@
                (div ((class "comment-datetime"))
                     (div ((class "datetime-container"))
                          (a ((href ,(string-append "/comment/" (number->string (comment-id current)))) (class "comment-link"))
-                            ,(date->string (seconds->date (comment-datetime current)) #t)))))
+                            ;,(date->string (seconds->date (comment-datetime current)) #t)
+                            ,(posix->string (comment-datetime current) DEFAULT_DATETIME_FORMAT)
+                            ))))
         
           ,(if [> 4 depth] `(div ((class "comment-replies"))
                                  ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies))
@@ -242,12 +246,11 @@
                            ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
                            ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
 
-                           (div ((style "text-align: left; border-top-width: 1px; border-top-color: gainsboro; border-top-style: solid; padding: 5px; margin-top: 10px; font-size: 12px; color: #858cac"))
+                           (div ((style "text-align: left; padding: 5px; margin-top: 10px; font-size: 12px; color: #858cac"))
                                 "posted by "
                                 (a ((class "user-link") (href ,(string-append "/user/" (number->string (post-uid post))))) (b ,(uid->db->string db (post-uid post))))
                                 " on "
-                                ,(date->string (seconds->date (post-datetime post)) #t)
-                                
+                                ,(posix->string (post-datetime post) DEFAULT_DATETIME_FORMAT)
                                 ,(if (and (user-logged-in? db r) (equal? (user-id (current-user db r)) (post-uid post)))
                                      `(a ((class "user-link") (style "float: right") (href ,(string-append "/delete-post?pid=" (number->string (post-id post))))) "delete")
                                      ""))

@@ -9,7 +9,7 @@
             (div ((class "heading-helper"))
                  (div ((class "heading-text"))
                       (a ((class "heading-link-main") (href "/"))
-                         "basket" (span ((class "base")) ".") "base"))
+                         "#" (span ((class "base")) ".") "minimal"))
                  ,(if sorter? `(div ((class "heading-sorter")) ,@(render-sorter order)) "")
                  (div ((class "heading-links"))
                       (div ((style "width: 100%; text-align: right"))

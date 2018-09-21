@@ -109,19 +109,18 @@ body {
     display: flex;
 
 
-    padding-top: 6px;
-    padding-bottom: 6px;
+    padding-top: 8px;
+    padding-bottom: 8px;
     
     text-align: left;
     display: flex;
 
     width: fill;
     cursor: pointer;
-    /*
+    
     border-bottom-color: rgba(133, 140, 172, 0.171);
     border-bottom-width: 1px;
     border-bottom-style: solid;
-    */
     
 
 }
@@ -329,6 +328,7 @@ body {
 .comment-content {
     flex: 1 auto;
     line-height: 1.5em;
+    
 }
 
 .comment-username {
@@ -342,7 +342,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: right;
-    min-width: 300px;
+    min-width: 100px;
     padding-right: 10px;
 }
 
