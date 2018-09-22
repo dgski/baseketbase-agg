@@ -82,11 +82,21 @@
                                                                                     sid))))))
           (redirect-to "login")))))
 
-; receives request and db connection and attemps to log user out
+; receives request and db connection and attempts to log user out
 ; request, db -> redirect
 (define (attempt-user-logout r db)
   (delete-session-db db (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
   (redirect-to "/" #:headers (list (cookie->header (logout-id-cookie "sid")))))
+
+
+; recieves request and db connections and attempts to sign up user
+(define (attempt-user-signup r db)
+  (match-let ([(list username password) (parse-login-info (request-bindings r))])
+    (if (username->db->user db username)
+        (redirect-to "/signup?message=Username is taken - Try again.")
+        (begin
+          (user->db db(user 'null-it-autoincrements username "" "" (hashpass password)))
+          (attempt-user-login r db)))))
 
 (provide (all-defined-out))
 (provide (all-from-out web-server/http/id-cookie))

@@ -168,6 +168,10 @@
 (define (do-logout r)
   (attempt-user-logout r db))
 
+; consumes request and signs user up
+(define (do-signup r)
+  (attempt-user-signup r db))
+
 ; # PAGE RESPONSE FUNCTIONS
 
 ; consume request and return the 'not found'
@@ -306,11 +310,27 @@
                    (br)(br)
                    "Enjoy being a part of this community!")))))
 
+
+
+; consumes a test and a redirection destination and returns a wrapping function which checks test, and if not valid redirects to destination
+; cond,string -> function
+(define (page-gate-keeper-factory test redirect-dest)
+  (lambda (f)
+    (lambda args (if test (apply f args) (redirect-to redirect-dest)))))
+
+;(define logreq (page-gate-keeper-factory 
+
+
 ; Login required
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function
 (define (logreq f)
   (lambda args (if (user-logged-in? db (car args)) (apply f args) (redirect-to "login"))))
+
+; Nonlogin required
+; consumes function and returns wrapping lambda which verifies request does not contain valid session information before running function
+(define (nonlogreq f)
+  (lambda args (if (not (user-logged-in? db (car args))) (apply f args) (redirect-to "account"))))
 
 ; consume a request, return a page that allows replying to the given comment
 (define (reply-comment r)
@@ -381,6 +401,24 @@
                                      (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
                                 ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
 
+; consume request, return X-expr representing sign-up page
+; request -> X-expr
+(define (sign-up-page r)
+  (let* ([bindings (request-bindings r)]
+         [message (check-and-extract-binding 'message bindings)])
+    (render-gnr-page r
+                     "Sign Up"
+                     `(div ((class "items"))
+                           (div ((class "top-items"))
+                                (div ((class "top-item login") (style "width: 85px"))
+                                     (form ((action "do-signup"))
+                                           (input ((class "our-input") (type "text") (placeholder "username") (name "username")))
+                                           (input ((class "our-input") (type "password") (placeholder "password") (name "password")))
+                                           (button ((class "our-button")) "continue")))
+                                ,(let ([contents (or message "Sign up today to join our interesting community!")])
+                                   `(div ((class "second-items info")) ,contents)))))))
+   
+
 ; consume request, return page asking whether user wants to delete their account
 ;
 (define (delete-account r )
@@ -445,7 +483,7 @@
    [("user" (integer-arg)) user-page]
    [("comment" (integer-arg)) comment-page]
    [("delete-account") (logreq delete-account)]
-
+   
    ; Receiving Data
    [("submit") (logreq submit-page)]
    [("add-comment" (integer-arg)) (logreq add-comment)]
@@ -459,6 +497,10 @@
    [("login") login-page]
    [("do-login") do-login]
    [("do-logout") do-logout]
+   
+   [("signup") (nonlogreq sign-up-page)]
+   [("do-signup") (nonlogreq do-signup)]
+
 
    ; Utilities
    [("static" (string-arg)) serve-asset]

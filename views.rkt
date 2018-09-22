@@ -30,7 +30,8 @@
                                                 (href ,(string-append "/" (car x)))) ,(cadr x)))
                                '(("submit" "submit")
                                  ("about" "about")
-                                 ("login" "sign in")))))
+                                 ("login" "sign in")
+                                 ("signup" "sign up")))))
 
 ; render website footer
 (define (render-footer)
