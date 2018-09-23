@@ -4,9 +4,13 @@
          web-server/servlet
          threading)
 
+(require "utils.rkt")
+
+
 ; # CONSTANTS
 (define POST_DECAY_RATE (expt 0.5 (/ 1 86400)))
 (define 2WEEKS 1209600)
+(define POSTS_PER_PAGE 15)
 
 
 ; # UTILITY FUNCTIONS
@@ -91,9 +95,9 @@
         (vector-ref x 10)))
 
 
-; Get all posts from db
+; Get posts from db
 ; -> list
-(define (get-posts db)
+(define (get-posts db)  
   (map vector->post (query-rows db "SELECT * FROM posts")))
 
 ; Get post from db with id
@@ -138,9 +142,9 @@
 
 
 ; consume a string and return list
-(define (get-sorted-posts db type)
+(define (get-sorted-posts db type start end)
   (let ([posts (get-posts db)])
-    (match type
+    (list-slice (match type
       ["hot"
        (~> posts
            (map (lambda (x) (cons (calc-post-heat x) x)) _)
@@ -152,7 +156,7 @@
       ["top"
        (sort posts (lambda (a b) (if (< (post-score a) (post-score b)) #f #t)))]
       ["new"
-       (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))])))
+       (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))]) start end)))
        
 ;# COMMENTS
 

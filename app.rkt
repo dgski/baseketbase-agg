@@ -189,10 +189,22 @@
 (define (front-page r)
   (let* ([bindings (request-bindings r)]
          [order (if (exists-binding? 'sort bindings) (extract-binding/single 'sort bindings) "hot")]
+         [start (string->number (or (check-and-extract-binding 'start bindings) "0"))]
+         [end (string->number (or (check-and-extract-binding 'end bindings) (number->string POSTS_PER_PAGE)))]
          [u (if (user-logged-in? db r) (current-user db r) #f)])
-    (render-gnr-page  #:order order #:sorter #t r "basketbase - Front Page" (render-posts
-                                                                             (map (lambda (x)
-                                                                                    (cons x (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id x)) #f))) (get-sorted-posts db order)) order))))
+    (render-gnr-page
+     #:order order
+     #:sorter
+     #t
+     r
+     "basketbase - Front Page"
+     (render-posts
+      (map (lambda (x)
+             (cons x (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id x)) #f)))
+           (get-sorted-posts db order start end))
+      order
+      start
+      end))))
 
 ; consume request and return the about page
 ; request -> X-expr

@@ -34,11 +34,11 @@
                                  ("signup" "sign up")))))
 
 ; render website footer
-(define (render-footer)
+(define (render-footer order start end posts-length)
   `(div ((class "footer"))
-             (div ((class "controls"))
-                  (a ((class "control-link") (href "prev")) "< prev")
-                  (a ((class "control-link") (href "next")) "next >"))))
+        (div ((class "controls"))
+             ,(if (not (= start 0)) `(a ((class "control-link") (href ,(string-append "?start=" (number->string (- start POSTS_PER_PAGE)) "&end=" (number->string (- end POSTS_PER_PAGE))))) "< prev") "     ")
+             ,(if (>= posts-length POSTS_PER_PAGE) `(a ((class "control-link") (href ,(string-append "?sort=" order "&start=" (number->string (+ start POSTS_PER_PAGE)) "&end=" (number->string (+ end POSTS_PER_PAGE))))) "next >") "     "))))
 
 ; render website sorter
 (define (render-sorter order)
@@ -85,7 +85,7 @@
 
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
-(define (render-posts posts order)
+(define (render-posts posts order start end)
   `(div
     ;(div ((class "top-items-helper"))
     ;,(render-top-posts (take posts 3)))
@@ -93,7 +93,7 @@
     (br)
     (div ((class "items"))
         ,@(map render-post #|(cdddr posts)|# posts)
-        ,(render-footer))))
+        ,(render-footer order start end (length posts)))))
 
 ; consume a list of three items and return an X-exp representing it
 ; list of item -> X-expr
