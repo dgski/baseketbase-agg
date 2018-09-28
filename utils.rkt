@@ -6,6 +6,16 @@
          web-server/servlet-env)
 
 
+; COOKIE UTILITIES
+
+;consumes a list of cookies and a cookie id and returns a boolean value whether this cookie exists in the list
+; list, string -> bool
+(define (cookie-exists? cookies id)
+  (cond
+    [(null? cookies) #f]
+    [(equal? (client-cookie-name (car cookies)) id) #t]
+    [else (cookie-exists? (cdr cookies) id)]))
+
 
 ; LIST UTILITIES
 
@@ -18,9 +28,7 @@
      (if end
          (if (< end (length l)) (take l end) l)
          l)]
-    
     [else (list-slice (cdr l) (- start 1) (if end (- end 1) end))]))
-
 
 
 ; BINDING UTILITIES
@@ -42,5 +50,15 @@
          [current-with-timezone (with-timezone current (current-timezone))])
     (~t (+period current (period [seconds (->utc-offset current-with-timezone)])) format)))
 
+
+; Consume HTTP bindings and return a list of user-specific bindings
+; bindings -> list
+(define (extract-user-bindings bindings)
+  (for/list ([b '(email profile old-password new-password-1 new-password-2)])
+    (extract-binding/single b bindings)))
+
 ; # EXPORTS
 (provide (all-defined-out))
+
+
+

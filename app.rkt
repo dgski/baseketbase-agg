@@ -12,94 +12,19 @@
 (require "model.rkt")
 (require "sessions.rkt")
 (require "utils.rkt")
-
-
-
-; # CREATE DATABASE CONNECTION
-(define db
-  (sqlite3-connect #:database "baseketbase.db" #:mode 'create))
+(require "dbconn.rkt")
+(require "comments.rkt")
+(require "posts.rkt")
+(require "page.rkt")
 
 ; # SETUP CRYPTOGRAPHY
 (setup-crypto)
 
-; # RENDER FUNCTIONS
-
-; consume a comment and a depth and return a X-expr representing it and all of it's children
-; comment number -> X-expr
-(define (render-comment x depth render-reply u)
-  (let ([current (car x)]
-        [replies (cadr x)])
-    `(div ((class"comment" ))
-          (div ((class "comment-aligner"))
-               (div ((class "comment-content"))
-                    (div ((class "comment-username")) ,(render-voters "comment" (comment-id current) (if u (get-comm-vote db (user-id u) (comment-id current)) #f))
-                         (a ((class "user-link") (href ,(string-append "/user/" (number->string (comment-uid current)))))
-                            ,(uid->db->string db (comment-uid current)))
-                         
-                         ,(if render-reply `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid="
-                                                                                           (number->string (comment-id current))
-                                                                                           "&pid="
-                                                                                           (number->string (comment-pid current))))) "reply") "")
-
-                         ,(if (and render-reply (= (comment-uid current) (user-id u)))
-                              `(a ((style "padding-left: 0px") (class "reply-link") (href ,(string-append "/delete-comment?cid="
-                                                                                                          (number->string (comment-id current))))) "delete") ""))
-                    (div ((class "comment-body")) ,(comment-body current)))
-               (div ((class "comment-datetime"))
-                    (div ((class "datetime-container"))
-                         (a ((href ,(string-append "/comment/" (number->string (comment-id current)))) (class "comment-link"))
-                            ;,(date->string (seconds->date (comment-datetime current)) #t)
-                            ,(posix->string (comment-datetime current) DEFAULT_DATETIME_FORMAT)
-                            ))))
-        
-          ,(if [> 4 depth] `(div ((class "comment-replies"))
-                                 ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies))
-               `(div ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies) )))))
-
-; consume a list of comments and return a X-expr representing it
-(define (render-comments comms render-reply u)
-    (map (lambda (x) (render-comment x 0 render-reply u)) comms))
-
-; consume a title and an X-expr and return a X-expr for a general page
-; string X-expr -> X-expr
-(define (render-gnr-page r page-title content #:sorter [sorter #f] #:order [order "hot"])
-  (response/xexpr
-   #:preamble #"<!doctype html>"
-   `(html (head (title ,page-title)
-                (link ((rel "stylesheet")
-                       (type "text/css")
-                       (href "/static/style.css"))))
-          (body        
-           ,(if (user-logged-in? db r)
-                (render-logged-heading (current-user db r) sorter order)
-                (render-less-heading sorter order))
-           ,content))))
-
 ; # RECIEVING UPDATES
 
-; Consume a request containing new post information and add it to database  if valid
-; request -> redirect to "/"
-(define (submit-post r)
-  (post->db db (parse-post (current-user db r) (request-bindings r)))
-  (redirect-to "/"))
 
-; consume request, pid and return the post page (after adding comment)
-; request -> redirect to "/post/pid"
-(define (add-comment r pid)
-  (let* ([bindings (request-bindings r)]
-         [body (extract-binding/single 'body bindings)]
-         [replyto (if (exists-binding? 'replyto bindings) (string->number (extract-binding/single 'replyto bindings)) -1)])
-    (comment->db db (comment 0
-                             (user-id (current-user db r))
-                             pid
-                             1
-                             0
-                             1
-                             "2018-07-20"
-                             body
-                             replyto)))
-  (inc-comment-db db pid) ; Increment number of comments
-  (redirect-to (string-append "/post/" (number->string pid))))
+
+
 
 ; change vote status in database
 (define (handle-vote-change v dir id uid alter-vote new-vote-func)
@@ -139,11 +64,7 @@
                   (alter-post-vote db id dir)))]))
   (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))
 
-; Consume HTTP bindings and return a list of user-specific bindings
-; bindings -> list
-(define (extract-user-bindings bindings)
-  (for/list ([b '(email profile old-password new-password-1 new-password-2)])
-    (extract-binding/single b bindings)))
+
 
 ; consume a request filled with user's updated information, write to database and redirect
 ; request -> redirect
@@ -160,17 +81,6 @@
                             (user-passhash curruser)))))
   (redirect-to "/account"))
          
-;consumes request and logs user in
-(define (do-login r)
-  (attempt-user-login r db))
-
-; consumes request and logs user out
-(define (do-logout r)
-  (attempt-user-logout r db))
-
-; consumes request and signs user up
-(define (do-signup r)
-  (attempt-user-signup r db))
 
 ; # PAGE RESPONSE FUNCTIONS
 
@@ -191,7 +101,9 @@
          [order (if (exists-binding? 'sort bindings) (extract-binding/single 'sort bindings) "hot")]
          [start (string->number (or (check-and-extract-binding 'start bindings) "0"))]
          [end (string->number (or (check-and-extract-binding 'end bindings) (number->string POSTS_PER_PAGE)))]
-         [u (if (user-logged-in? db r) (current-user db r) #f)])
+         [u (if (user-logged-in? db r) (current-user db r) #f)]
+         [cookies (request-cookies r)])
+    (write cookies) (newline)
     (render-gnr-page
      #:order order
      #:sorter
@@ -204,7 +116,8 @@
            (get-sorted-posts db order start end))
       order
       start
-      end))))
+      end
+      (not (or (user-logged-in? db r) (cookie-exists? cookies "no-banner")))))))
 
 ; consume request and return the about page
 ; request -> X-expr
@@ -250,61 +163,7 @@
                     (button ((class "our-button") (style "width: 125px")) "save changes"))(br)
               (a ((href "/delete-account"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "delete account")))))))
               
-   
-; consume request and return the post being requested along with comments
-; request -> X-expr
-(define (post-page r id)
-  (let ([render-reply (user-logged-in? db r)]
-        [post (pid->db->post db id)])
-    (render-gnr-page r
-                     "Post Page"
-                     `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-                           ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
-                           ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
-
-                           (div ((style "text-align: left; padding: 5px; margin-top: 10px; font-size: 12px; color: #858cac"))
-                                "posted by "
-                                (a ((class "user-link") (href ,(string-append "/user/" (number->string (post-uid post))))) (b ,(uid->db->string db (post-uid post))))
-                                " on "
-                                ,(posix->string (post-datetime post) DEFAULT_DATETIME_FORMAT)
-                                ,(if (and (user-logged-in? db r) (equal? (user-id (current-user db r)) (post-uid post)))
-                                     `(a ((class "user-link") (style "float: right") (href ,(string-append "/delete-post?pid=" (number->string (post-id post))))) "delete")
-                                     ""))
-                           
-                           (div ((class "comment-box"))
-                                ,(if (user-logged-in? db r)
-                                     `(form ((class "reply-box")
-                                             (action ,(string-append "/add-comment/" (number->string id))))
-                                            (div ((class "reply-box-textarea"))
-                                                 (textarea ((placeholder "New Commment...")
-                                                            (class "our-input submit-input submit-text-area")
-                                                            (style "height: 50px;")
-                                                            (name "body"))))
-                                            (div ((class "reply-box-button"))
-                                                 (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
-                           ,@(render-comments (pid->db->hotcomms db id) render-reply (if (user-logged-in? db r) (current-user db r) #f))))))
-
-; consume request and return the submit page
-; request -> X-expr
-(define (submit-page r)
-  (render-gnr-page r
-   "basketbase - Submit Page"
-   `(div ((class "items"))
-         (div ((class "submit"))
-              (form ((action "submit-new-post"))
-                    (p "Submit something new:")
-                    (input ((class "our-input submit-input") (type "text") (placeholder "title") (name "title")))
-                    (br)
-                    (p "Link:")
-                    (input ((class "our-input submit-input") (type "text") (placeholder "url") (name "url")))
-                    (br)
-                    (p "Or Write Something Yourself:")
-                    (textarea ((width "fill")
-                               (placeholder "body")
-                               (class "our-input submit-input submit-text-area")
-                               (name "body")))
-                    (br)
-                    (button ((class "our-button")) "submit"))))))
+  
 
 ;consumes request and produces X-xexpr representing the login page
 (define (login-page r)
@@ -318,9 +177,9 @@
                          (input ((class "our-input") (type "password") (placeholder "password") (name "password")))
                          (button ((class "our-button")) "continue")))
               (div ((class "second-items info"))
-                   "You can sign up instantly by entering your desired username and password in the log in fields."
+                   "Welcome to #.minimal!"
                    (br)(br)
-                   "Enjoy being a part of this community!")))))
+                   "We hope you enjoy being a part of this community!")))))
 
 
 
@@ -333,37 +192,6 @@
 ;(define logreq (page-gate-keeper-factory 
 
 
-; Login required
-; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
-; function -> function
-(define (logreq f)
-  (lambda args (if (user-logged-in? db (car args)) (apply f args) (redirect-to "login"))))
-
-; Nonlogin required
-; consumes function and returns wrapping lambda which verifies request does not contain valid session information before running function
-(define (nonlogreq f)
-  (lambda args (if (not (user-logged-in? db (car args))) (apply f args) (redirect-to "account"))))
-
-; consume a request, return a page that allows replying to the given comment
-(define (reply-comment r)
-  (let* ([bindings (request-bindings r)]
-         [pid (extract-binding/single 'pid bindings)]
-         [cid (extract-binding/single 'cid bindings)])
-    (render-gnr-page r "Reply to:" `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
-                                         (h3 "Replying to:")
-                                         ,(render-comment (list(id->db->comment db cid) '()) 0 #f (if (user-logged-in? db r) (current-user db r) #f))
-                                         (br)(br)
-                                         (form ((class "reply-box")
-                                                (action ,(string-append "/add-comment/" pid)))
-                                               (div ((class "reply-box-textarea"))
-                                                    (textarea ((placeholder "New Commment...")
-                                                               (class "our-input submit-input submit-text-area")
-                                                               (style "height: 50px;")
-                                                               (name "body")
-                                                               (active "")))
-                                                    (input ((type "hidden") (name "replyto") (value ,cid))))
-                                               (div ((class "reply-box-button"))
-                                                    (button ((class "our-button") (style "margin-right: 0px;")) "Post")))))))
 
 ; consume a request, return a page that describes a user account
 (define (user-page r id)
@@ -387,31 +215,16 @@
                                         "This user has not filled out their profile.")
                                    (br)
                                    (br)
-                                   #|(a ((href "/message"))
-                                      (button ((class "our-button")) "send a message"))|#
                                    (a ((href "/report"))
                                       (button ((class "our-button")) "report")))
                                 (h3 "Submissions")
                                 ,@(map render-post posts)
                                 ,(if (null? posts) "This user has not submitted any content yet." "")
-                               (div ((class "comment-box") (style "padding-top: 25px;"))
+                                (div ((class "comment-box") (style "padding-top: 25px;"))
                                      (h3 "Comments")
                                      ,@(if (null? comments) `("This user has not posted any comments yet.") (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f)))))))))
 
-; consume request and cid, return X-expr representing comment page
-; request, int -> X-expr
-(define (comment-page r cid)
-  (let* ([currcomm (id->db->comment db cid)]
-         [currpost (pid->db->post db (comment-pid currcomm))]
-         [render-reply (user-logged-in? db r)])
-    (render-gnr-page r
-                     "Comment Page"
-                     `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-                           ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
-                           (div ((style "padding-top: 50px"))
-                                (div ((style "padding-bottom: 20px; text-align: left"))
-                                     (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
-                                ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
+
 
 ; consume request, return X-expr representing sign-up page
 ; request -> X-expr
@@ -432,36 +245,25 @@
    
 
 ; consume request, return page asking whether user wants to delete their account
-;
 (define (delete-account r )
   (let ([u (current-user db r)])
-  (render-gnr-page r "Delete Account"
-                   `(div ((class "items"))
-                         (div ((class "userpage-holder"))
-                              (h3 ,(string-append "Deleting account '" (user-username u) "'"))
-                              (p ((class "our-paragraph"))
-                                 "Are you sure you want to delete this account?")
-                              (a ((href "/account"))(button ((class "our-button") (style "width: 125px")) "no"))
-                              (a ((href "/delete-account-now"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "yes")))))))
-
-(define (delete-comment r)
-  (let* ([bindings (request-bindings r)]
-         [cid (extract-binding/single 'cid bindings)]
-         [currcomm (id->db->comment db cid)])
-    (begin
-      (when (= (user-id (current-user db r)) (comment-uid currcomm)) (delete-comment-db db cid))
-      (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))))
+    (render-gnr-page r "Delete Account"
+                     `(div ((class "items"))
+                           (div ((class "userpage-holder"))
+                                (h3 ,(string-append "Deleting account '" (user-username u) "'"))
+                                (p ((class "our-paragraph"))
+                                   "Are you sure you want to delete this account?")
+                                (a ((href "/account"))(button ((class "our-button") (style "width: 125px")) "no"))
+                                (a ((href "/delete-account-now"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "yes")))))))
 
 
-(define (delete-post r)
-  (let* ([bindings (request-bindings r)]
-         [pid (extract-binding/single 'pid bindings)]
-         [currpost (pid->db->post db pid)])
-    (begin
-      (when (= (user-id (current-user db r)) (post-uid currpost)) (delete-post-db db pid))
-      (redirect-to "/"))))
 
 
+
+; consume a request and return a redirect with a new cookie header to prevent banner display
+; request -> redirect
+(define (hide-banner r)
+  (redirect-to "/" #:headers (list (cookie->header (make-cookie "no-banner" "true")))))
 
 
 ; # STATIC FILE SERVING
@@ -470,9 +272,26 @@
 ; request -> X-expr
 ; Future : make sure that MIME type is correct!!!!!
 (define (serve-asset r f)
- (response 200 #"OK" 0 #"text/css" empty (lambda (op)
-                                           (with-input-from-file (string-append "static/" f)
-                                             (lambda () (copy-port (current-input-port) op))))))
+  (response 200 #"OK" 0 #"text/css" empty (lambda (op)
+                                            (with-input-from-file (string-append "static/" f)
+                                              (lambda () (copy-port (current-input-port) op))))))
+
+
+
+; consume request and cid, return X-expr representing comment page
+; request, int -> X-expr
+(define (comment-page r cid)
+  (let* ([currcomm (id->db->comment db cid)]
+         [currpost (pid->db->post db (comment-pid currcomm))]
+         [render-reply (user-logged-in? db r)])
+    (render-gnr-page r
+                     "Comment Page"
+                     `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
+                           ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
+                           (div ((style "padding-top: 50px"))
+                                (div ((style "padding-bottom: 20px; text-align: left"))
+                                     (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
+                                ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
 
 
 ; # REQUEST DISPATCHING
@@ -509,10 +328,9 @@
    [("login") login-page]
    [("do-login") do-login]
    [("do-logout") do-logout]
-   
    [("signup") (nonlogreq sign-up-page)]
    [("do-signup") (nonlogreq do-signup)]
-
+   [("hide-banner") (nonlogreq hide-banner)]
 
    ; Utilities
    [("static" (string-arg)) serve-asset]
@@ -526,4 +344,7 @@
                #:launch-browser? #f
                #:servlet-path "/"
                #:servlet-regexp #rx""
+               ;#:listen-ip "0.0.0.0"
                #:port 8080)
+
+

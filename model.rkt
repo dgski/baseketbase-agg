@@ -145,18 +145,18 @@
 (define (get-sorted-posts db type start end)
   (let ([posts (get-posts db)])
     (list-slice (match type
-      ["hot"
-       (~> posts
-           (map (lambda (x) (cons (calc-post-heat x) x)) _)
-           (sort _ (lambda (a b)
-                     (if (< (post-score (cdr a)) (post-score (cdr b)))
-                         #f
-                         #t)))
-           (map (lambda (x) (cdr x)) _))]
-      ["top"
-       (sort posts (lambda (a b) (if (< (post-score a) (post-score b)) #f #t)))]
-      ["new"
-       (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))]) start end)))
+                  ["hot"
+                   (~> posts
+                       (map (lambda (x) (cons (calc-post-heat x) x)) _)
+                       (sort _ (lambda (a b)
+                                 (if (< (post-score (cdr a)) (post-score (cdr b)))
+                                     #f
+                                     #t)))
+                       (map (lambda (x) (cdr x)) _))]
+                  ["top"
+                   (sort posts (lambda (a b) (if (< (post-score a) (post-score b)) #f #t)))]
+                  ["new"
+                   (sort posts (lambda (a b) (if (< (post-datetime a) (post-datetime b)) #f #t)))]) start end)))
        
 ;# COMMENTS
 

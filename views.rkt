@@ -60,54 +60,5 @@
           (span ((class "voter")) "▼"))))
 
 
-; consume item x and return X-expr representing data
-; item -> X-expr
-(define (render-post x)
-  (let ([post (car x)]
-        [vote (cdr x)])
-  `(div ((class "item"))
-        (div ((class "heat-level"))
-             (div ((class "heat-level-cont"))
-                  ,(render-voters "post" (post-id post) vote)
-                  ,(number->string (post-score post))))
-        (a ((class "item-link")(href ,(post-url post))) (div ((class "content"))
-             (div ((class "title")) ,(post-title post))
-             (div ((class "url-sample")) ,(post-url post))))
-        (div ((class "comments"))
-             (div ((class "comment-container"))
-                  (a ((class "comment-link")
-                      (href ,(string-append  "/post/" (number->string (post-id post)))))
-                     ,(string-append (number->string (post-numcom post)) " comments")))))))
-
-
-
-
-
-; consume a list of items and return X-expr representing it
-; list of item -> X-expr
-(define (render-posts posts order start end)
-  `(div
-    ;(div ((class "top-items-helper"))
-    ;,(render-top-posts (take posts 3)))
-    (br)
-    (br)
-    (div ((class "items"))
-        ,@(map render-post #|(cdddr posts)|# posts)
-        ,(render-footer order start end (length posts)))))
-
-; consume a list of three items and return an X-exp representing it
-; list of item -> X-expr
-(define (render-top-posts lat)
-  `(div ((class "top-items"))
-        (div ((class "top-item"))
-             (div ((class "img-crop") (style "height: 232px;")) ,(post-body (car (list-ref lat 0))))
-             ,(render-post (list-ref lat 0)))
-        (div ((class "second-items"))
-             (div ((class "img-crop") (style "height: 74px")) ,(post-body (car (list-ref lat 1))))
-             ,(render-post (list-ref lat 1))
-             (div ((class "img-crop") (style "height: 74px")) ,(post-body (car (list-ref lat 2))))
-             ,(render-post (list-ref lat 2)))))
-
-
 ; # EXPORTS
 (provide (all-defined-out))
