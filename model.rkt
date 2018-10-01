@@ -258,6 +258,7 @@
 ; User convenience struct
 (struct user (id username email profile passhash))
 
+; Consume vector and return user
 (define (vector->user u)
   (user (vector-ref u 0)
         (vector-ref u 1)

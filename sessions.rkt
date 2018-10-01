@@ -5,7 +5,8 @@
          crypto/all)
 
 (require "model.rkt"
-         "dbconn.rkt")
+         "dbconn.rkt"
+         "utils.rkt")
 
 ; Use the right crypto libraries
 (define (setup-crypto)
@@ -99,16 +100,16 @@
           (user->db db(user 'null-it-autoincrements username "" "" (hashpass password)))
           (attempt-user-login r db)))))
 
-; Login required
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function
-(define (logreq f)
-  (lambda args (if (user-logged-in? db (car args)) (apply f args) (redirect-to "login"))))
+(define logreq
+  (gate-factory (lambda (a) (user-logged-in? db (car a))) "login"))
 
-; Nonlogin required
 ; consumes function and returns wrapping lambda which verifies request does not contain valid session information before running function
-(define (nonlogreq f)
-  (lambda args (if (not (user-logged-in? db (car args))) (apply f args) (redirect-to "account"))))
+; function -> function
+(define nonlogreq
+  (gate-factory (lambda (a) (not (user-logged-in? db (car a)))) "account"))
+
 
 ;consumes request and logs user in
 (define (do-login r)

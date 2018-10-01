@@ -98,5 +98,20 @@
   (inc-comment-db db pid) ; Increment number of comments
   (redirect-to (string-append "/post/" (number->string pid))))
 
+; consume request and cid, return X-expr representing comment page
+; request, int -> X-expr
+(define (comment-page r cid)
+  (let* ([currcomm (id->db->comment db cid)]
+         [currpost (pid->db->post db (comment-pid currcomm))]
+         [render-reply (user-logged-in? db r)])
+    (render-gnr-page r
+                     "Comment Page"
+                     `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
+                           ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
+                           (div ((style "padding-top: 50px"))
+                                (div ((style "padding-bottom: 20px; text-align: left"))
+                                     (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
+                                ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
+
 
 (provide (all-defined-out))

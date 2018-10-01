@@ -59,6 +59,25 @@
            (href ,(string-append "/vote?type=" type "&id=" (number->string id) "&dir=down")))
           (span ((class "voter")) "▼"))))
 
+; consume item x and return X-expr representing data
+; item -> X-expr
+(define (render-post x)
+  (let ([post (car x)]
+        [vote (cdr x)])
+  `(div ((class "item"))
+        (div ((class "heat-level"))
+             (div ((class "heat-level-cont"))
+                  ,(render-voters "post" (post-id post) vote)
+                  ,(number->string (post-score post))))
+        (a ((class "item-link")(href ,(post-url post))) (div ((class "content"))
+             (div ((class "title")) ,(post-title post))
+             (div ((class "url-sample")) ,(post-url post))))
+        (div ((class "comments"))
+             (div ((class "comment-container"))
+                  (a ((class "comment-link")
+                      (href ,(string-append  "/post/" (number->string (post-id post)))))
+                     ,(string-append (number->string (post-numcom post)) " comments")))))))
+
 
 ; # EXPORTS
 (provide (all-defined-out))

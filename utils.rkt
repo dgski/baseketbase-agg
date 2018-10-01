@@ -16,6 +16,11 @@
     [(equal? (client-cookie-name (car cookies)) id) #t]
     [else (cookie-exists? (cdr cookies) id)]))
 
+; consume a request and return a redirect with a new cookie header to prevent banner display
+; request -> redirect
+(define (hide-banner r)
+  (redirect-to "/" #:headers (list (cookie->header (make-cookie "no-banner" "true")))))
+
 
 ; LIST UTILITIES
 
@@ -38,6 +43,7 @@
 (define (check-and-extract-binding id binds)
   (if (exists-binding? id binds) (extract-binding/single id binds) #f))
 
+
 ; DATETIME UTILITIES
 
 ; Standard datetime format used for basketbase
@@ -57,8 +63,32 @@
   (for/list ([b '(email profile old-password new-password-1 new-password-2)])
     (extract-binding/single b bindings)))
 
+
+; # FILE SERVING UTILITIES
+
+; consume request and filename and send that file back to use
+; request -> X-expr
+; Future : make sure that MIME type is correct!!!!!
+(define (serve-asset r f)
+  (response 200 #"OK" 0 #"text/css" empty (lambda (op)
+                                            (with-input-from-file (string-append "static/" f)
+                                              (lambda () (copy-port (current-input-port) op))))))
+
+
+; # MISC UTILITIES
+
+; consumes a test and a redirection destination and returns a wrapping function which checks test, and if not valid redirects to destination
+; cond,string -> function
+(define (gate-factory test r-dest)
+  (lambda (f)
+    (lambda args
+      (if (test args) (apply f args) (redirect-to r-dest)))))
+
 ; # EXPORTS
 (provide (all-defined-out))
+
+
+
 
 
 

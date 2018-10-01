@@ -83,24 +83,7 @@
   (post->db db (parse-post (current-user db r) (request-bindings r)))
   (redirect-to "/"))
 
-; consume item x and return X-expr representing data
-; item -> X-expr
-(define (render-post x)
-  (let ([post (car x)]
-        [vote (cdr x)])
-  `(div ((class "item"))
-        (div ((class "heat-level"))
-             (div ((class "heat-level-cont"))
-                  ,(render-voters "post" (post-id post) vote)
-                  ,(number->string (post-score post))))
-        (a ((class "item-link")(href ,(post-url post))) (div ((class "content"))
-             (div ((class "title")) ,(post-title post))
-             (div ((class "url-sample")) ,(post-url post))))
-        (div ((class "comments"))
-             (div ((class "comment-container"))
-                  (a ((class "comment-link")
-                      (href ,(string-append  "/post/" (number->string (post-id post)))))
-                     ,(string-append (number->string (post-numcom post)) " comments")))))))
+
 
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
@@ -128,5 +111,46 @@
              ,(render-post (list-ref lat 1))
              (div ((class "img-crop") (style "height: 74px")) ,(post-body (car (list-ref lat 2))))
              ,(render-post (list-ref lat 2)))))
+
+; change vote status in database
+(define (handle-vote-change v dir id uid alter-vote new-vote-func)
+  (match (list (vote-dir v) dir)
+    [(list 1 "up")
+     (alter-vote db id "down")]
+    [(list 1 "down")
+     (for ([i 2]) (alter-vote db id "down"))
+     (new-vote-func)]
+    [(list 0 "up")
+     (for ([i 2]) (alter-vote db id "up"))
+     (new-vote-func)]
+    [(list 0 "down")
+     (alter-vote db id "up")]))
+
+; consume request return previous page
+(define (submit-vote r)
+  (let* ([bindings (request-bindings r)]
+         [type (extract-binding/single 'type bindings)]
+         [id (string->number (extract-binding/single 'id bindings))]
+         [dir (extract-binding/single 'dir bindings)]
+         [uid (user-id (current-user db r))])
+    (cond
+      [(equal? type "post")
+       (if (user-voted-on-post db uid id)
+           (let ([v (get-post-vote db uid id)])
+             (pid-delete-vote db uid id)
+             (handle-vote-change v dir id uid alter-post-vote (lambda () (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN))))))
+           (begin (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN))) ; New Vote
+                  (alter-post-vote db id dir)))]
+      [else
+       (if (user-voted-on-comm? db uid id)
+           (let ([v (get-comm-vote db uid id)])
+             (cid-delete-vote db uid id)
+             (handle-vote-change v dir id uid alter-comm-vote (lambda () (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN))))))
+           (begin (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN))) ; New Vote
+                  (alter-post-vote db id dir)))]))
+  (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))
+
+
+
 
 (provide (all-defined-out))
