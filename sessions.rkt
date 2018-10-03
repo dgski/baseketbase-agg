@@ -56,6 +56,7 @@
   (let ([session_id (parse-session-info r)])
     (and session_id
          (session-exists? db session_id)
+         ; Check if session is expired
          (let ([curr_session (sid->db->session db session_id)])
            (and (equal? (session-ip curr_session) (request-client-ip r))
                 (< (current-datetime) (session-expiry curr_session))
@@ -67,22 +68,24 @@
   (let ([session_id (parse-session-info r)])
     (id->db->user db (session-uid (sid->db->session db session_id)))))
 
+; consumes sid, uid and request and creates a new session, and adds it to the database
+; string -> add to database
+(define (create-add-session sid uid r)
+  (session->db db (session sid uid (request-client-ip r) (get-user-agent r) "")))
+
+; consumes a cookie key and value and returns an HTTP header with that single cookie
+(define (single-cookie-header key value)
+  (list (cookie->header (make-id-cookie key (make-secret-salt/file "salt.key") value))))
+
 ; receives request and db connection and attempts to log user in
 ; request, db -> redirect
 (define (attempt-user-login r db)
-  (match-let ([(list username password) (parse-login-info (request-bindings r))])
-    (let ([curr_user (username->db->user db username)])
-      (if [and curr_user (non-empty-string? password) (valid-password? password (user-passhash curr_user))]
-          (let ([sid (gen-sid)])
-            (begin (session->db db (session sid
-                                            (user-id curr_user)
-                                            (request-client-ip r)
-                                            (get-user-agent r)
-                                            "EXPIRY TIME IS HANDLED WITHIN"))
-                   (redirect-to "/" #:headers (list (cookie->header (make-id-cookie "sid"
-                                                                                    (make-secret-salt/file "salt.key")
-                                                                                    sid))))))
-          (redirect-to "login")))))
+  (match-let* ([(list username password) (parse-login-info (request-bindings r))]
+              [curr-user (username->db->user db username)])
+    (if [and curr-user (non-empty-string? password) (valid-password? password (user-passhash curr-user))]
+        (let ([sid (gen-sid)])
+          (begin (create-add-session sid (user-id curr-user) r) (redirect-to "/" #:headers (single-cookie-header "sid" sid))))
+        (redirect-to "login"))))
 
 ; receives request and db connection and attempts to log user out
 ; request, db -> redirect
@@ -90,10 +93,10 @@
   (delete-session-db db (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
   (redirect-to "/" #:headers (list (cookie->header (logout-id-cookie "sid")))))
 
-
 ; recieves request and db connections and attempts to sign up user
 (define (attempt-user-signup r db)
-  (match-let ([(list username password) (parse-login-info (request-bindings r))])
+  (match-let* ([login-info (parse-login-info (request-bindings r))]
+              [(list username password) login-info])
     (if (username->db->user db username)
         (redirect-to "/signup?message=Username is taken - Try again.")
         (begin
@@ -109,7 +112,6 @@
 ; function -> function
 (define nonlogreq
   (gate-factory (lambda (a) (not (user-logged-in? db (car a)))) "account"))
-
 
 ;consumes request and logs user in
 (define (do-login r)

@@ -1,5 +1,7 @@
 #lang racket
 
+; This file provides the functions used to interact with the data model and database
+
 (require db
          web-server/servlet
          threading)
@@ -26,11 +28,6 @@
                     (car (cdr (car lat))) 
                     ((lambda (lat) (if (null? lat) "" ", ")) (cdr lat)) 
                     (create-col (cdr lat))))))
-
-
-
-(define (current-datetime)
-  (floor (* 0.001 (current-inexact-milliseconds))))
 
 ; consumes string and list or lists and returns a string representing a table
 ; string, list -> string
@@ -74,7 +71,6 @@
               (post-numcom x)
               (post-section x)))
 
-
 ; consume database and post and delete post 
 (define (delete-post-db db pid)
   (query-exec db "DELETE FROM posts WHERE id = ?" pid))
@@ -93,7 +89,6 @@
         (vector-ref x 8)
         (vector-ref x 9)
         (vector-ref x 10)))
-
 
 ; Get posts from db
 ; -> list
@@ -136,11 +131,6 @@
 (define (calc-post-heat x)
   (* (post-score x) (expt POST_DECAY_RATE (- (current-datetime) (post-datetime x)))))
 
-; Calculate the heat level of the comment
-(define (calc-comment-heat x)
-  (* (comment-score (car x)) (expt POST_DECAY_RATE (- (current-datetime) (comment-datetime (car x))))))
-
-
 ; consume a string and return list
 (define (get-sorted-posts db type start end)
   (let ([posts (get-posts db)])
@@ -176,7 +166,6 @@
            (vector-ref x 7)
            (vector-ref x 8)))
 
-
 ; Add comment to database
 ;-> comment
 (define (comment->db db x)
@@ -194,7 +183,6 @@
 ; string -> comment
 (define (id->db->comment db cid)
   (vector->comment (query-row db "SELECT * FROM comments WHERE id = ?" cid)))
-
 
 ; Get a comment's replies
 ; string -> list of comments
@@ -215,8 +203,6 @@
   (map (lambda (x)
          (list x (get-comment-replies db (comment-id x)))) (pid->db->toplvlcomms db pid)))
 
-
-
 ; Get all comments and their replies - sorted using hotness algorithm
 ; string -> '((comment replies) (comment replies))
 (define (pid->db->hotcomms db pid)
@@ -224,8 +210,6 @@
       (map (lambda (x) (cons (calc-comment-heat x) x)) _)
       (sort _ (lambda (a b) (if (< (comment-score (cadr a)) (comment-score (cadr b))) #f #t)))
       (map (lambda (x) (cdr x)) _)))
-
-
 
 ; consume db and uid and return list of all comments by that user
 ; db, string -> list
@@ -252,6 +236,10 @@
                    (sub1 (comment-score currcomm))
                    id)])))
 
+; Calculate the heat level of the comment
+(define (calc-comment-heat x)
+  (* (comment-score (car x)) (expt POST_DECAY_RATE (- (current-datetime) (comment-datetime (car x))))))
+
 
 ; # USERS
 
@@ -265,7 +253,6 @@
         (vector-ref u 2)
         (if (sql-null? (vector-ref u 3)) "" (vector-ref u 3))
         (vector-ref u 4)))
-
 
 ; Add user to database
 (define (user->db db x)
@@ -298,6 +285,7 @@
 
 (define (uid->db->string db uid)
   (vector-ref (query-row db "SELECT * FROM users WHERE id = ?" uid) 1))
+
 
 ; # SESSIONS
 
@@ -388,9 +376,6 @@
     (if (null? v) #f (vector->vote (car v)))))
 
 
-
 ; # EXPORTS
 (provide (all-defined-out))
 (provide (all-from-out db))
-
-

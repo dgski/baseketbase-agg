@@ -1,26 +1,23 @@
 #lang racket
 
 (require "model.rkt"
-         "sessions.rkt")
+         "sessions.rkt"
+         "dbconn.rkt")
 
 ; # SETUP CRYPTOGRAPHY
 (setup-crypto)
 
-(define our_db
-  (sqlite3-connect #:database "baseketbase.db" #:mode 'create))
-
-
 ;Create Users table
-(if (not (table-exists? our_db "users"))
- (query-exec our_db (create-table "users" '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+(if (not (table-exists? db "users"))
+ (query-exec db (create-table "users" '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
                                             ("username" "TEXT")
                                             ("email" "TEXT")
                                             ("profile" "TEXT")
                                             ("passhash" "TEXT")))) "users table already exists")
 
 ;Create Posts table
-(if (not (table-exists? our_db "posts"))
-    (query-exec our_db (create-table "posts"
+(if (not (table-exists? db "posts"))
+    (query-exec db (create-table "posts"
                                      '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
                                        ("uid" "INTEGER")
                                        ("pos" "INTEGER")
@@ -35,8 +32,8 @@
                                        ))) "posts table already exists")
 
 ; Create Comments table
-(if (not (table-exists? our_db "comments"))
-    (query-exec our_db (create-table "comments"
+(if (not (table-exists? db "comments"))
+    (query-exec db (create-table "comments"
                                      '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT") 
                                        ("uid" "INTEGER")
                                        ("pid" "INTEGER")
@@ -48,8 +45,8 @@
                                        ("replyto" "INTEGER")))) "comments table already exists")
 
 ; Create sessions table
-(if (not (table-exists? our_db "sessions"))
-    (query-exec our_db (create-table "sessions"
+(if (not (table-exists? db "sessions"))
+    (query-exec db (create-table "sessions"
                                      '(("id" "TEXT PRIMARY KEY")
                                        ("uid" "INTEGER")
                                        ("ip" "TEXT")
@@ -57,8 +54,8 @@
                                        ("expiry" "INTEGER")))) "sessions table already exists")
 
 ; Create messages table
-(if (not (table-exists? our_db "messages"))
-    (query-exec our_db (create-table "messages"
+(if (not (table-exists? db "messages"))
+    (query-exec db (create-table "messages"
                                      '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT"
                                        ("uid_to" "INTEGER")
                                        ("uid_from" "INTEGER")
@@ -68,16 +65,14 @@
                                        ("replyto" "INTEGER"))))) "messages table already exists")
 
 ; Create votes table
-(if (not (table-exists? our_db "votes"))
-    (query-exec our_db (create-table "votes"
+(if (not (table-exists? db "votes"))
+    (query-exec db (create-table "votes"
                                      '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
                                        ("uid" "INTEGER")
                                        ("pid" "INTEGER")
                                        ("cid" "INTEGER")
                                        ("type" "INTEGER") ; 0 - post, 1 - comment
                                        ("dir" "INTEGER")))) "votes table already exists")
-
-
 
 ; Add Sample Posts Into db
 ; (struct post (id uid pos neg score datetime title url body numcomm section))
@@ -96,15 +91,14 @@
                            (post 0 2 10 0 634 0 "When Life Seems like too much.." "http://basket.base" "" 0 "front")
                            (post 0 2 54 0 27 0 "Top Museums, Rome - Pictures" "http://instagram.com" "" 0 "front")
                            ))
-(map (lambda (x) (post->db our_db x)) sample-posts)
+(map (lambda (x) (post->db db x)) sample-posts)
 
 ; Add Sample comments
-(comment->db our_db (comment 1 2 1 3 4 5 1000 "This is a top level comment" -1))
-(comment->db our_db (comment 1 2 1 3 4 5 1000 "This is a reply" 1))
-(comment->db our_db (comment 1 2 1 3 4 5 1000 "This is another reply" 1))
-(comment->db our_db (comment 1 2 1 3 4 5 1000 "Third level down." 2))
-
+(comment->db db (comment 1 2 1 3 4 5 1000 "This is a top level comment" -1))
+(comment->db db (comment 1 2 1 3 4 5 1000 "This is a reply" 1))
+(comment->db db (comment 1 2 1 3 4 5 1000 "This is another reply" 1))
+(comment->db db (comment 1 2 1 3 4 5 1000 "Third level down." 2))
 
 ; Add Sample users
-(user->db our_db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234")))
-(user->db our_db (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx"))
+(user->db db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234")))
+(user->db db (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx"))

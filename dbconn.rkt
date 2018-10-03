@@ -5,5 +5,5 @@
 (define db
   (sqlite3-connect #:database "baseketbase.db" #:mode 'create))
 
-; export
+; EXPORT
 (provide db)

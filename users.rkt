@@ -8,13 +8,12 @@
          "sessions.rkt"
          "model.rkt"
          "utils.rkt"
-         "views.rkt"
-         "comments.rkt")
+         "content.rkt")
 
 ; consume request and return the account page
 ; request -> X-expr
 (define (account-page r)
-  (render-gnr-page r
+  (page r
    (string-append "id" "'s Profile")
    (let ([u (current-user db r)])
    `(div ((class "items") (style "margin-bottom: 70px;"))
@@ -47,7 +46,7 @@
 
 ;consumes request and produces X-xexpr representing the login page
 (define (login-page r)
-  (render-gnr-page r
+  (page r
    "Login"
    '(div ((class "items"))
          (div ((class "top-items"))
@@ -83,7 +82,7 @@
 (define (sign-up-page r)
   (let* ([bindings (request-bindings r)]
          [message (check-and-extract-binding 'message bindings)])
-    (render-gnr-page r
+    (page r
                      "Sign Up"
                      `(div ((class "items"))
                            (div ((class "top-items"))
@@ -99,7 +98,7 @@
 ; consume request, return page asking whether user wants to delete their account
 (define (delete-account r )
   (let ([u (current-user db r)])
-    (render-gnr-page r "Delete Account"
+    (page r "Delete Account"
                      `(div ((class "items"))
                            (div ((class "userpage-holder"))
                                 (h3 ,(string-append "Deleting account '" (user-username u) "'"))
@@ -119,7 +118,7 @@
                           (cons x (if (user-logged-in? db r)
                                       (get-post-vote db (user-id (current-user db r)) (post-id x))
                                       #f))) _))])
-    (render-gnr-page r
+    (page r
                      "User"
                      `(div ((class "items"))
                            (div ((class "userpage-holder"))

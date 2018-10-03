@@ -46,6 +46,10 @@
 
 ; DATETIME UTILITIES
 
+; returns the current datetime
+(define (current-datetime)
+  (floor (* 0.001 (current-inexact-milliseconds))))
+
 ; Standard datetime format used for basketbase
 (define DEFAULT_DATETIME_FORMAT "dd/MM/yy HH:mm")
 
@@ -55,7 +59,6 @@
   (let* ([current (posix->datetime secs)]
          [current-with-timezone (with-timezone current (current-timezone))])
     (~t (+period current (period [seconds (->utc-offset current-with-timezone)])) format)))
-
 
 ; Consume HTTP bindings and return a list of user-specific bindings
 ; bindings -> list
@@ -67,8 +70,8 @@
 ; # FILE SERVING UTILITIES
 
 ; consume request and filename and send that file back to use
+; Currently used for css
 ; request -> X-expr
-; Future : make sure that MIME type is correct!!!!!
 (define (serve-asset r f)
   (response 200 #"OK" 0 #"text/css" empty (lambda (op)
                                             (with-input-from-file (string-append "static/" f)
@@ -86,9 +89,3 @@
 
 ; # EXPORTS
 (provide (all-defined-out))
-
-
-
-
-
-

@@ -6,15 +6,12 @@
          racket/port)
 
 ; # REQUIRE LOCAL
-(require "views.rkt"
-         "model.rkt"
+(require "model.rkt"
          "sessions.rkt"
          "utils.rkt"
          "dbconn.rkt"
-         "comments.rkt"
-         "posts.rkt"
+         "content.rkt"
          "page.rkt"
-         "misc.rkt"
          "users.rkt")
 
 ; # SETUP CRYPTOGRAPHY
@@ -29,7 +26,7 @@
          [end (string->number (or (check-and-extract-binding 'end bindings) (number->string POSTS_PER_PAGE)))]
          [u (if (user-logged-in? db r) (current-user db r) #f)]
          [cookies (request-cookies r)])
-    (render-gnr-page
+    (page
      #:order order
      #:sorter
      #t
@@ -85,6 +82,7 @@
    ; Utilities
    [("static" (string-arg)) serve-asset]
 
+   ; Page Not Found
    [else page-not-found]))
 
 ; Start the server
@@ -93,5 +91,4 @@
                #:launch-browser? #f
                #:servlet-path "/"
                #:servlet-regexp #rx""
-               ;#:listen-ip "0.0.0.0"
                #:port 8080)
