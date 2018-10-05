@@ -82,10 +82,10 @@
 
 ; consumes a test and a redirection destination and returns a wrapping function which checks test, and if not valid redirects to destination
 ; cond,string -> function
-(define (gate-factory test r-dest)
+(define (gate-factory test dest)
   (lambda (f)
     (lambda args
-      (if (test args) (apply f args) (redirect-to r-dest)))))
+      (if (test args) (apply f args) dest))))
 
 ; # EXPORTS
 (provide (all-defined-out))

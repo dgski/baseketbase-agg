@@ -9,70 +9,70 @@
 
 ;Create Users table
 (if (not (table-exists? db "users"))
- (query-exec db (create-table "users" '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
-                                            ("username" "TEXT")
-                                            ("email" "TEXT")
-                                            ("profile" "TEXT")
-                                            ("passhash" "TEXT")))) "users table already exists")
+    (query-exec db (create-table "users" '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                           ("username" "TEXT")
+                                           ("email" "TEXT")
+                                           ("profile" "TEXT")
+                                           ("passhash" "TEXT")))) "users table already exists")
 
 ;Create Posts table
 (if (not (table-exists? db "posts"))
     (query-exec db (create-table "posts"
-                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
-                                       ("uid" "INTEGER")
-                                       ("pos" "INTEGER")
-                                       ("neg" "INTEGER")
-                                       ("score" "INTEGER")
-                                       ("datetime" "INTEGER")
-                                       ("title" "TEXT")
-                                       ("url" "TEXT")
-                                       ("body" "TEXT")
-                                       ("numcom" "INTEGER")
-                                       ("section" "TEXT")
-                                       ))) "posts table already exists")
+                                 '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                   ("uid" "INTEGER")
+                                   ("pos" "INTEGER")
+                                   ("neg" "INTEGER")
+                                   ("score" "INTEGER")
+                                   ("datetime" "INTEGER")
+                                   ("title" "TEXT")
+                                   ("url" "TEXT")
+                                   ("body" "TEXT")
+                                   ("numcom" "INTEGER")
+                                   ("section" "TEXT")
+                                   ))) "posts table already exists")
 
 ; Create Comments table
 (if (not (table-exists? db "comments"))
     (query-exec db (create-table "comments"
-                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT") 
-                                       ("uid" "INTEGER")
-                                       ("pid" "INTEGER")
-                                       ("pos" "INTEGER")
-                                       ("neg" "INTEGER")
-                                       ("score" "INTEGER")
-                                       ("datetime" "INTEGER")
-                                       ("body" "TEXT")
-                                       ("replyto" "INTEGER")))) "comments table already exists")
+                                 '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT") 
+                                   ("uid" "INTEGER")
+                                   ("pid" "INTEGER")
+                                   ("pos" "INTEGER")
+                                   ("neg" "INTEGER")
+                                   ("score" "INTEGER")
+                                   ("datetime" "INTEGER")
+                                   ("body" "TEXT")
+                                   ("replyto" "INTEGER")))) "comments table already exists")
 
 ; Create sessions table
 (if (not (table-exists? db "sessions"))
     (query-exec db (create-table "sessions"
-                                     '(("id" "TEXT PRIMARY KEY")
-                                       ("uid" "INTEGER")
-                                       ("ip" "TEXT")
-                                       ("useragent" "TEXT")
-                                       ("expiry" "INTEGER")))) "sessions table already exists")
+                                 '(("id" "TEXT PRIMARY KEY")
+                                   ("uid" "INTEGER")
+                                   ("ip" "TEXT")
+                                   ("useragent" "TEXT")
+                                   ("expiry" "INTEGER")))) "sessions table already exists")
 
 ; Create messages table
 (if (not (table-exists? db "messages"))
     (query-exec db (create-table "messages"
-                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT"
-                                       ("uid_to" "INTEGER")
-                                       ("uid_from" "INTEGER")
-                                       ("body" "TEXT")
-                                       ("datetime" "INTEGER")
-                                       ("seen" "INTEGER")
-                                       ("replyto" "INTEGER"))))) "messages table already exists")
+                                 '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT"
+                                         ("uid_to" "INTEGER")
+                                         ("uid_from" "INTEGER")
+                                         ("body" "TEXT")
+                                         ("datetime" "INTEGER")
+                                         ("seen" "INTEGER")
+                                         ("replyto" "INTEGER"))))) "messages table already exists")
 
 ; Create votes table
 (if (not (table-exists? db "votes"))
     (query-exec db (create-table "votes"
-                                     '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
-                                       ("uid" "INTEGER")
-                                       ("pid" "INTEGER")
-                                       ("cid" "INTEGER")
-                                       ("type" "INTEGER") ; 0 - post, 1 - comment
-                                       ("dir" "INTEGER")))) "votes table already exists")
+                                 '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                   ("uid" "INTEGER")
+                                   ("pid" "INTEGER")
+                                   ("cid" "INTEGER")
+                                   ("type" "INTEGER") ; 0 - post, 1 - comment
+                                   ("dir" "INTEGER")))) "votes table already exists")
 
 ; Add Sample Posts Into db
 ; (struct post (id uid pos neg score datetime title url body numcomm section))

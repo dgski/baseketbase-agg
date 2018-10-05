@@ -79,7 +79,7 @@
 
 ; receives request and db connection and attempts to log user in
 ; request, db -> redirect
-(define (attempt-user-login r db)
+(define (attempt-user-login r)
   (match-let* ([(list username password) (parse-login-info (request-bindings r))]
               [curr-user (username->db->user db username)])
     (if [and curr-user (non-empty-string? password) (valid-password? password (user-passhash curr-user))]
@@ -89,12 +89,12 @@
 
 ; receives request and db connection and attempts to log user out
 ; request, db -> redirect
-(define (attempt-user-logout r db)
+(define (attempt-user-logout r)
   (delete-session-db db (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
   (redirect-to "/" #:headers (list (cookie->header (logout-id-cookie "sid")))))
 
 ; recieves request and db connections and attempts to sign up user
-(define (attempt-user-signup r db)
+(define (attempt-user-signup r)
   (match-let* ([login-info (parse-login-info (request-bindings r))]
               [(list username password) login-info])
     (if (username->db->user db username)
@@ -106,24 +106,12 @@
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function
 (define logreq
-  (gate-factory (lambda (a) (user-logged-in? db (car a))) "login"))
+  (gate-factory (lambda (a) (user-logged-in? db (car a))) (redirect-to "login")))
 
 ; consumes function and returns wrapping lambda which verifies request does not contain valid session information before running function
 ; function -> function
 (define nonlogreq
-  (gate-factory (lambda (a) (not (user-logged-in? db (car a)))) "account"))
-
-;consumes request and logs user in
-(define (do-login r)
-  (attempt-user-login r db))
-
-; consumes request and logs user out
-(define (do-logout r)
-  (attempt-user-logout r db))
-
-; consumes request and signs user up
-(define (do-signup r)
-  (attempt-user-signup r db))
+  (gate-factory (lambda (a) (not (user-logged-in? db (car a)))) (redirect-to "account")))
 
 (provide (all-defined-out))
 (provide (all-from-out web-server/http/id-cookie))

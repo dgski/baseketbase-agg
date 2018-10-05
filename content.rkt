@@ -15,32 +15,32 @@
   (let ([render-reply (user-logged-in? db r)]
         [post (pid->db->post db id)])
     (page r
-                     "Post Page"
-                     `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-                           ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
-                           ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
+          "Post Page"
+          `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
+                ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
+                ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
 
-                           (div ((style "text-align: left; padding: 5px; margin-top: 10px; font-size: 12px; color: #858cac"))
-                                "posted by "
-                                (a ((class "user-link") (href ,(string-append "/user/" (number->string (post-uid post))))) (b ,(uid->db->string db (post-uid post))))
-                                " on "
-                                ,(posix->string (post-datetime post) DEFAULT_DATETIME_FORMAT)
-                                ,(if (and (user-logged-in? db r) (equal? (user-id (current-user db r)) (post-uid post)))
-                                     `(a ((class "user-link") (style "float: right") (href ,(string-append "/delete-post?pid=" (number->string (post-id post))))) "delete")
-                                     ""))
+                (div ((style "text-align: left; padding: 5px; margin-top: 10px; font-size: 12px; color: #858cac"))
+                     "posted by "
+                     (a ((class "user-link") (href ,(string-append "/user/" (number->string (post-uid post))))) (b ,(uid->db->string db (post-uid post))))
+                     " on "
+                     ,(posix->string (post-datetime post) DEFAULT_DATETIME_FORMAT)
+                     ,(if (and (user-logged-in? db r) (equal? (user-id (current-user db r)) (post-uid post)))
+                          `(a ((class "user-link") (style "float: right") (href ,(string-append "/delete-post?pid=" (number->string (post-id post))))) "delete")
+                          ""))
                            
-                           (div ((class "comment-box"))
-                                ,(if (user-logged-in? db r)
-                                     `(form ((class "reply-box")
-                                             (action ,(string-append "/add-comment/" (number->string id))))
-                                            (div ((class "reply-box-textarea"))
-                                                 (textarea ((placeholder "New Commment...")
-                                                            (class "our-input submit-input submit-text-area")
-                                                            (style "height: 50px;")
-                                                            (name "body"))))
-                                            (div ((class "reply-box-button"))
-                                                 (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
-                           ,@(render-comments (pid->db->hotcomms db id) render-reply (if (user-logged-in? db r) (current-user db r) #f))))))
+                (div ((class "comment-box"))
+                     ,(if (user-logged-in? db r)
+                          `(form ((class "reply-box")
+                                  (action ,(string-append "/add-comment/" (number->string id))))
+                                 (div ((class "reply-box-textarea"))
+                                      (textarea ((placeholder "New Commment...")
+                                                 (class "our-input submit-input submit-text-area")
+                                                 (style "height: 50px;")
+                                                 (name "body"))))
+                                 (div ((class "reply-box-button"))
+                                      (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
+                ,@(render-comments (pid->db->hotcomms db id) render-reply (if (user-logged-in? db r) (current-user db r) #f))))))
 
 
 ; consume request, if user is allowed to, delete comment, redirect to front-page
@@ -96,19 +96,6 @@
               "This is a minimal online news aggregator. You can see links that others think are interesting or noteworthy, be part of engaging discussions in the comments section, and submit your own links too!") "")
         ,@(map render-post #|(cdddr posts)|# posts)
         ,(render-footer order start end (length posts)))))
-
-; consume a list of three items and return an X-exp representing it
-; list of item -> X-expr
-(define (render-top-posts lat)
-  `(div ((class "top-items"))
-        (div ((class "top-item"))
-             (div ((class "img-crop") (style "height: 232px;")) ,(post-body (car (list-ref lat 0))))
-             ,(render-post (list-ref lat 0)))
-        (div ((class "second-items"))
-             (div ((class "img-crop") (style "height: 74px")) ,(post-body (car (list-ref lat 1))))
-             ,(render-post (list-ref lat 1))
-             (div ((class "img-crop") (style "height: 74px")) ,(post-body (car (list-ref lat 2))))
-             ,(render-post (list-ref lat 2)))))
 
 ; change vote status in database
 (define (handle-vote-change v dir id uid alter-vote new-vote-func)
@@ -172,37 +159,54 @@
 (define (render-comments comms render-reply u)
     (map (lambda (x) (render-comment x 0 render-reply u)) comms))
 
+; consume a user id and return a string representing a link to that user page
+; number -> string
+(define (create-user-link uid)
+  `(a ((class "user-link") (href ,(string-append "/user/" (number->string uid)))) ,(uid->db->string db uid)))
+
+; consume a comment id and return a string representing a reply link to it
+; number -> string
+(define (create-reply-link render-reply cid)
+  (if render-reply
+      `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid=" (number->string cid) "&pid=" (number->string cid)))) "reply")
+      ""))
+
+; consume a comment id and return a string representing a delete link to it
+; number -> string
+(define (create-delete-link render-reply comment-uid current-uid cid)
+  (if (and render-reply (equal? comment-uid current-uid))
+      `(a ((style "padding-left: 0px") (class "reply-link") (href ,(string-append "/delete-comment?cid=" (number->string cid)))) "delete")
+      ""))
+
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
 ; comment number -> X-expr
-(define (render-comment x depth render-reply u)
-  (let ([current (car x)]
-        [replies (cadr x)])
-    `(div ((class"comment" ))
+(define (render-comment comments-list depth render-reply curr-user)
+  (let* ([current (car comments-list)]
+         [replies (cadr comments-list)]
+         [cid (comment-id current)]
+         [uid (comment-uid current)]
+         [body (comment-body current)]
+         [datetime (posix->string (comment-datetime current) DEFAULT_DATETIME_FORMAT)]
+         [voters (render-voters "comment" cid (if curr-user (get-comm-vote db (user-id curr-user) cid) #f))]
+         [user-link (create-user-link uid)]
+         [reply-link (create-reply-link render-reply cid)]
+         [delete-link (create-delete-link render-reply uid curr-user cid)])
+
+    `(div ((class "comment"))
           (div ((class "comment-aligner"))
                (div ((class "comment-content"))
-                    (div ((class "comment-username")) ,(render-voters "comment" (comment-id current) (if u (get-comm-vote db (user-id u) (comment-id current)) #f))
-                         (a ((class "user-link") (href ,(string-append "/user/" (number->string (comment-uid current)))))
-                            ,(uid->db->string db (comment-uid current)))
-                         
-                         ,(if render-reply `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid="
-                                                                                           (number->string (comment-id current))
-                                                                                           "&pid="
-                                                                                           (number->string (comment-pid current))))) "reply") "")
-
-                         ,(if (and render-reply (= (comment-uid current) (user-id u)))
-                              `(a ((style "padding-left: 0px") (class "reply-link") (href ,(string-append "/delete-comment?cid="
-                                                                                                          (number->string (comment-id current))))) "delete") ""))
-                    (div ((class "comment-body")) ,(comment-body current)))
+                    (div ((class "comment-username")) ,voters ,user-link ,reply-link ,delete-link)
+                    (div ((class "comment-body")) ,body))
                (div ((class "comment-datetime"))
                     (div ((class "datetime-container"))
-                         (a ((href ,(string-append "/comment/" (number->string (comment-id current)))) (class "comment-link"))
-                            ;,(date->string (seconds->date (comment-datetime current)) #t)
-                            ,(posix->string (comment-datetime current) DEFAULT_DATETIME_FORMAT)
-                            ))))
-        
-          ,(if [> 4 depth] `(div ((class "comment-replies"))
-                                 ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies))
-               `(div ,@(map (lambda (x) (render-comment x (+ 1 depth) render-reply u)) replies) )))))
+                         (a ((href ,(string-append "/comment/" (number->string cid))) (class "comment-link")) ,datetime))))
+          
+          ,(if (> 4 depth)
+               `(div ((class "comment-replies"))
+                     ,@(map (lambda (c)
+                              (render-comment c (+ 1 depth) render-reply curr-user)) replies))
+               `(div ,@(map (lambda (c)
+                              (render-comment c (+ 1 depth) render-reply curr-user)) replies))))))
 
 
 ; consume a request, return a page that allows replying to the given comment
@@ -262,13 +266,11 @@
   (let* ([currcomm (id->db->comment db cid)]
          [currpost (pid->db->post db (comment-pid currcomm))]
          [render-reply (user-logged-in? db r)])
-    (page r
-                     "Comment Page"
-                     `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
-                           ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
-                           (div ((style "padding-top: 50px"))
-                                (div ((style "padding-bottom: 20px; text-align: left"))
-                                     (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
-                                ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
+    (page r "Comment Page" `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
+                                 ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
+                                 (div ((style "padding-top: 50px"))
+                                      (div ((style "padding-bottom: 20px; text-align: left"))
+                                           (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
+                                      ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
 
 (provide (all-defined-out))

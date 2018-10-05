@@ -73,10 +73,10 @@
 
    ; Login management
    [("login") (nonlogreq login-page)]
-   [("do-login") (nonlogreq do-login)]
-   [("do-logout") (logreq do-logout)]
+   [("do-login") (nonlogreq attempt-user-login)]
+   [("do-logout") (logreq attempt-user-logout)]
    [("signup") (nonlogreq sign-up-page)]
-   [("do-signup") (nonlogreq do-signup)]
+   [("do-signup") (nonlogreq attempt-user-signup)]
    [("hide-banner") (nonlogreq hide-banner)]
 
    ; Utilities
