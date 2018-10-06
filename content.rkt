@@ -82,7 +82,6 @@
   (redirect-to "/"))
 
 
-
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
 (define (render-posts posts order start end [render-banner #t])
@@ -139,21 +138,26 @@
 ; consume item x and return X-expr representing data
 ; item -> X-expr
 (define (render-post x)
-  (let ([post (car x)]
-        [vote (cdr x)])
-  `(div ((class "item"))
-        (div ((class "heat-level"))
-             (div ((class "heat-level-cont"))
-                  ,(render-voters "post" (post-id post) vote)
-                  ,(number->string (post-score post))))
-        (a ((class "item-link")(href ,(post-url post))) (div ((class "content"))
-             (div ((class "title")) ,(post-title post))
-             (div ((class "url-sample")) ,(post-url post))))
-        (div ((class "comments"))
-             (div ((class "comment-container"))
-                  (a ((class "comment-link")
-                      (href ,(string-append  "/post/" (number->string (post-id post)))))
-                     ,(string-append (number->string (post-numcom post)) " comments")))))))
+  (let* ([post (car x)]
+         [pid (post-id post)]
+         [score (number->string (post-score post))]
+         [url (post-url post)]
+         [title (post-title post)]
+         [numcom (number->string (post-numcom post))]
+         [vote (cdr x)]
+         [voters (render-voters "post" pid vote)])
+    `(div ((class "item"))
+          (div ((class "heat-level"))
+               (div ((class "heat-level-cont")) ,voters ,score))
+          (a ((class "item-link")(href ,url))
+             (div ((class "content"))
+                  (div ((class "title")) ,title)
+                  (div ((class "url-sample")) ,url)))
+          (div ((class "comments"))
+               (div ((class "comment-container"))   
+                    (a ((class "comment-link")
+                        (href ,(string-append  "/post/" (number->string pid))))
+                       ,(string-append numcom " comments")))))))
 
 ; consume a list of comments and return a X-expr representing it
 (define (render-comments comms render-reply u)
