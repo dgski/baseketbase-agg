@@ -80,7 +80,7 @@
 
 ; # MISC UTILITIES
 
-; consumes a test and a redirection destination and returns a wrapping function which checks test, and if not valid redirects to destination
+; consumes a test and a dest and returns a wrapping function which checks test and accordingly returns dest
 ; cond,string -> function
 (define (gate-factory test dest)
   (lambda (f)
