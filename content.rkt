@@ -40,6 +40,7 @@
                                                  (name "body"))))
                                  (div ((class "reply-box-button"))
                                       (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
+                
                 ,@(render-comments (pid->db->hotcomms db id) render-reply (if (user-logged-in? db r) (current-user db r) #f))))))
 
 
@@ -47,10 +48,12 @@
 (define (delete-post r)
   (let* ([bindings (request-bindings r)]
          [pid (extract-binding/single 'pid bindings)]
-         [currpost (pid->db->post db pid)])
-    (begin
-      (when (= (user-id (current-user db r)) (post-uid currpost)) (delete-post-db db pid))
-      (redirect-to "/"))))
+         [currpost (pid->db->post db pid)]
+         [curr-uid (user-id (current-user db r))]
+         [uid (post-uid currpost)])
+    
+    (begin (when (= curr-uid uid) (delete-post-db db pid))
+           (redirect-to "/"))))
 
 ; consume request and return the submit page
 ; request -> X-expr
@@ -74,7 +77,6 @@
                     (br)
                     (button ((class "our-button")) "submit"))))))
 
-
 ; Consume a request containing new post information and add it to database  if valid
 ; request -> redirect to "/"
 (define (submit-post r)
@@ -82,19 +84,21 @@
   (redirect-to "/"))
 
 
+; welcome banner constant
+(define welcome-banner
+  `(div ((class "info") (style "margin-bottom: 40px; background: linear-gradient(black,navy); color: white;"))
+        (a ((href "/hide-banner") (class "heading-link") (style "float: right; margin-top: -20px; margin-right: -15px; font-size: 16px;")) "x")
+        (h3 ((style "margin-top: 0px;")) "Welcome to Our Site!")
+        "This is a minimal online news aggregator. You can see links that others think are interesting or noteworthy, be part of engaging discussions in the comments section, and submit your own links too!"))
+
+
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
 (define (render-posts posts order start end [render-banner #t])
-  `(div
-    ;(div ((class "top-items-helper"))
-    ;,(render-top-posts (take posts 3)))
-    (div ((class "items") (style "margin-top: 40px;"))
-         ,(if render-banner `(div ((class "info") (style "margin-bottom: 40px; background: linear-gradient(black,navy); color: white;"))
-              (a ((href "/hide-banner") (class "heading-link") (style "float: right; margin-top: -20px; margin-right: -15px; font-size: 16px;")) "x")
-              (h3 ((style "margin-top: 0px;")) "Welcome to Our Site!")
-              "This is a minimal online news aggregator. You can see links that others think are interesting or noteworthy, be part of engaging discussions in the comments section, and submit your own links too!") "")
-        ,@(map render-post #|(cdddr posts)|# posts)
-        ,(render-footer order start end (length posts)))))
+  `(div ((class "items") (style "margin-top: 40px;"))
+        ,(if render-banner welcome-banner "")
+        ,@(map render-post posts)
+        ,(render-footer order start end (length posts))))
 
 ; change vote status in database
 (define (handle-vote-change v dir id uid alter-vote new-vote-func)
@@ -135,17 +139,25 @@
   (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))
 
 
-; consume item x and return X-expr representing data
+; consume item p and attach 
+(define (attach-comments-to-post r)
+  (lambda (p)
+    (cons p (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id p)) #f))))
+
+
+; consume item p and return X-expr representing data
+; format (post vote)
 ; item -> X-expr
-(define (render-post x)
-  (let* ([post (car x)]
+(define (render-post p)
+  (let* ([post (car p)]
          [pid (post-id post)]
          [score (number->string (post-score post))]
          [url (post-url post)]
          [title (post-title post)]
          [numcom (number->string (post-numcom post))]
-         [vote (cdr x)]
+         [vote (cdr p)]
          [voters (render-voters "post" pid vote)])
+    
     `(div ((class "item"))
           (div ((class "heat-level"))
                (div ((class "heat-level-cont")) ,voters ,score))
@@ -220,7 +232,7 @@
          [cid (extract-binding/single 'cid bindings)])
     (page r "Reply to:" `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
                                          (h3 "Replying to:")
-                                         ,(render-comment (list(id->db->comment db cid) '()) 0 #f (if (user-logged-in? db r) (current-user db r) #f))
+                                         ,(render-comment (list (id->db->comment db cid) '()) 0 #f (if (user-logged-in? db r) (current-user db r) #f))
                                          (br)(br)
                                          (form ((class "reply-box")
                                                 (action ,(string-append "/add-comment/" pid)))
@@ -239,10 +251,14 @@
 (define (delete-comment r)
   (let* ([bindings (request-bindings r)]
          [cid (extract-binding/single 'cid bindings)]
-         [currcomm (id->db->comment db cid)])
+         [currcomm (id->db->comment db cid)]
+         [curr-uid (user-id (current-user db r))]
+         [uid (comment-uid currcomm)]
+         [dest-url (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))])
+    
     (begin
-      (when (= (user-id (current-user db r)) (comment-uid currcomm)) (delete-comment-db db cid))
-      (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))))
+      (when (= uid curr-uid) (delete-comment-db db cid))
+      (redirect-to dest-url))))
 
 
 
@@ -251,18 +267,14 @@
 (define (add-comment r pid)
   (let* ([bindings (request-bindings r)]
          [body (extract-binding/single 'body bindings)]
-         [replyto (if (exists-binding? 'replyto bindings) (string->number (extract-binding/single 'replyto bindings)) -1)])
-    (comment->db db (comment 0
-                             (user-id (current-user db r))
-                             pid
-                             1
-                             0
-                             1
-                             "2018-07-20"
-                             body
-                             replyto)))
-  (inc-comment-db db pid) ; Increment number of comments
-  (redirect-to (string-append "/post/" (number->string pid))))
+         [replyto (if (exists-binding? 'replyto bindings) (string->number (extract-binding/single 'replyto bindings)) -1)]
+         [uid (user-id (current-user db r))]
+         [new-comment (comment 0 uid pid 1 0 1 "2018-07-20" body replyto)]
+         [post-url (string-append "/post/" (number->string pid))])
+  
+  (begin (comment->db db new-comment)
+         (inc-comment-db db pid)
+         (redirect-to post-url))))
 
 ; consume request and cid, return X-expr representing comment page
 ; request, int -> X-expr

@@ -108,6 +108,9 @@
                      (a ((href "/account"))(button ((class "our-button") (style "width: 125px")) "no"))
                      (a ((href "/delete-account-now"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "yes")))))))
 
+
+
+
 ; consume a database connection and a user id, and return the users most recent comments
 ; db, number -> list
 (define (get-recent-user-comments db uid)
@@ -119,8 +122,7 @@
 (define (get-recent-user-posts r db uid)
   (~> (uid->db->posts db uid)
       ((lambda (x) (if (< (length x) 5) x (take x 5))) _)
-      (map (lambda (x)
-             (cons x (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id x)) #f))) _)))
+      (map (attach-comments-to-post r) _)))
 
 ; consume a request, return a page that describes a user account
 (define (user-page r uid)

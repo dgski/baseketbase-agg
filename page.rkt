@@ -54,7 +54,6 @@
                   (div ((class "heading-links"))
                        (div ((style "width: 100%; text-align: right")) ,@links))))))
 
-
 ; links visible to anonymous user
 (define ANON_LINKS
   '(("submit" "submit")
@@ -76,14 +75,14 @@
        (href ,(string-append "/" (car lat))))
       ,(cadr lat)))
   
-
 ; render website heading for logged in user
 (define (render-logged-heading user sorter? order)
   (let* ([user-link-string (string-append "user/" (number->string (user-id user)))]
          [username (user-username user)]
+         [links (map create-heading-link KNOWN_LINKS)]
          [user-link (list (create-heading-link (list user-link-string username) "username"))])
     
-    (render-heading sorter? order (append (map create-heading-link KNOWN_LINKS) user-link))))
+    (render-heading sorter? order (append links user-link))))
 
 ; render website heading for new user
 (define (render-less-heading sorter? order)
@@ -114,8 +113,6 @@
                                              "&end="
                                              (number->string (+ end POSTS_PER_PAGE))))) "next >") "     "))))
 
-
-
 ; render post voters
 (define (render-voters type id vote)
   `(span ((class "voters"))
@@ -145,7 +142,7 @@
         `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
               (h3 "About This Site")
               (p ((style "line-height: 1.5em"))
-                 "Basketbase is a link aggregator/simple publishing platform ala Reddit. It is light and simple deploy. It's primary design goal is to be minimalist and an example of timeless design, such as the works of Deiter Rams."
+                 "Basketbase is a link aggregator/simple publishing platform ala Reddit. It is light and simple deploy. It's primary design goal is to be minimalist and an example of timeless design."
                  (br)(br)
                  "Designed and developed by David Gorski."))))
 

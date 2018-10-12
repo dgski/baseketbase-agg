@@ -21,25 +21,18 @@
 ; request -> X-expr
 (define (front-page r)
   (let* ([bindings (request-bindings r)]
-         [order (if (exists-binding? 'sort bindings) (extract-binding/single 'sort bindings) "hot")]
+         [order (or (check-and-extract-binding 'sort bindings) "hot")]
          [start (string->number (or (check-and-extract-binding 'start bindings) "0"))]
          [end (string->number (or (check-and-extract-binding 'end bindings) (number->string POSTS_PER_PAGE)))]
-         [u (if (user-logged-in? db r) (current-user db r) #f)]
-         [cookies (request-cookies r)])
-    (page
-     #:order order
-     #:sorter
-     #t
-     r
-     "basketbase - Front Page"
-     (render-posts
-      (map (lambda (x)
-             (cons x (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id x)) #f)))
-           (get-sorted-posts db order start end))
-      order
-      start
-      end
-      (not (or (user-logged-in? db r) (cookie-exists? cookies "no-banner")))))))
+         [cookies (request-cookies r)]
+         [render-banner? (not (or (user-logged-in? db r) (cookie-exists? cookies "no-banner")))]
+         [content (map (attach-comments-to-post r) (get-sorted-posts db order start end))])
+    
+    (page #:order order
+          #:sorter #t
+          r
+          "basketbase - Front Page"
+          (render-posts content order start end render-banner?))))
 
 ; # REQUEST DISPATCHING
 
