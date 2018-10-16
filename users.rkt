@@ -33,11 +33,12 @@
                                      ,(user-profile u))
                            (br)
                            "Change password:"(br)(br)
-                           (input ((class "our-input") (type "password") (placeholder "old password") (name "old-password")))
-                           (br)
                            (input ((class "our-input") (type "password") (placeholder "new password") (name "new-password-1")))
                            (br)
                            (input ((class "our-input") (type "password") (placeholder "re-type new password") (name "new-password-2")))
+                           (br)
+                           "Old password to validate changes:"(br)(br)
+                           (input ((class "our-input") (type "password") (placeholder "old password") (name "old-password")))
                            (br)
                            (button ((class "our-button") (style "width: 125px")) "save changes"))
                      (br)
@@ -47,6 +48,7 @@
 
 ;consumes request and produces X-xexpr representing the login page
 (define (login-page r)
+  (user->db! db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234")))
   (page r
         "Login"
         '(div ((class "items"))
@@ -66,22 +68,33 @@
 ; request -> redirect
 (define (update-user r)
   (match-let* ([curruser (current-user db r)]
-               [(list email profile old-pass new-pass-1 new-pass-2) (extract-user-bindings (request-bindings r))])
-    (user->db! db (user (user-id curruser)
-                        (user-username curruser)
-                        (if (non-empty-string? email) email (user-email curruser))
-                        profile
-                        (if (and (valid-password? old-pass (user-passhash curruser)) (equal? new-pass-1 new-pass-2))
-                            (hashpass new-pass-1)
-                            (user-passhash curruser)))))
-  (redirect-to "/account"))
-
+               [(list email
+                      profile
+                      old-pass
+                      new-pass-1
+                      new-pass-2) (extract-user-bindings (request-bindings r))]
+               [old-password-valid (valid-password? old-pass (user-passhash curruser))]
+               [new-passwords-match (equal? new-pass-1 new-pass-2)]
+               [email (if (non-empty-string? email) email (user-email curruser))]
+               [password (if (and old-password-valid
+                                  new-passwords-match
+                                  (non-empty-string? new-pass-1))
+                             (hashpass new-pass-1)
+                             (user-passhash curruser))])
+    
+    (when old-password-valid (user->db! db (user (user-id curruser)
+                                                 (user-username curruser)
+                                                 email
+                                                 profile
+                                                 password)))
+    (redirect-to "/account")))
 
 ; consume request, return X-expr representing sign-up page
 ; request -> X-expr
 (define (sign-up-page r)
   (let* ([bindings (request-bindings r)]
-         [message (check-and-extract-binding 'message bindings)])
+         [message (check-and-extract-binding 'message bindings)]
+         [contents (or message "Sign up today to join our interesting community!")])
     (page r
           "Sign Up"
           `(div ((class "items"))
@@ -91,10 +104,8 @@
                                 (input ((class "our-input") (type "text") (placeholder "username") (name "username")))
                                 (input ((class "our-input") (type "password") (placeholder "password") (name "password")))
                                 (button ((class "our-button")) "continue")))
-                     ,(let ([contents (or message "Sign up today to join our interesting community!")])
-                        `(div ((class "second-items info")) ,contents)))))))
+                     (div ((class "second-items info")) ,contents))))))
    
-
 ; consume request, return page asking whether user wants to delete their account
 (define (delete-account r )
   (let ([u (current-user db r)])
@@ -107,9 +118,6 @@
                         "Are you sure you want to delete this account?")
                      (a ((href "/account"))(button ((class "our-button") (style "width: 125px")) "no"))
                      (a ((href "/delete-account-now"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "yes")))))))
-
-
-
 
 ; consume a database connection and a user id, and return the users most recent comments
 ; db, number -> list
@@ -128,22 +136,23 @@
 (define (user-page r uid)
   (let ([user (id->db->user db uid)]
         [comments (get-recent-user-comments db uid)]
-        [posts (get-recent-user-posts r db uid)])
+        [posts (~> (get-recent-user-posts r db uid)
+                   (map render-post _))])
     (page r
           "User"
           `(div ((class "items"))
                 (div ((class "userpage-holder"))
+                     
                      (h3 ,(string-append "Profile for '" (user-username user) "'"))
                      (p ((class "our-paragraph"))
-                        ,(if (non-empty-string? (user-profile user))
-                             (user-profile user)
-                             "This user has not filled out their profile.")
+                        ,(if (non-empty-string? (user-profile user)) (user-profile user) "This user has not filled out their profile.")
                         (br)
                         (br)
                         (a ((href "/report"))
                            (button ((class "our-button")) "report")))
+                     
                      (h3 "Submissions")
-                     ,@(map render-post posts)
+                     ,@posts
                      ,(if (null? posts) "This user has not submitted any content yet." "")
                      (div ((class "comment-box") (style "padding-top: 25px;"))
                           (h3 "Comments")

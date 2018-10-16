@@ -82,6 +82,7 @@
 (define (attempt-user-login r)
   (match-let* ([(list username password) (parse-login-info (request-bindings r))]
               [curr-user (username->db->user db username)])
+    
     (if [and curr-user (non-empty-string? password) (valid-password? password (user-passhash curr-user))]
         (let ([sid (gen-sid)])
           (begin (create-add-session sid (user-id curr-user) r) (redirect-to "/" #:headers (single-cookie-header "sid" sid))))

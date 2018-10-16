@@ -103,39 +103,54 @@
 ; change vote status in database
 (define (handle-vote-change v dir id uid alter-vote new-vote-func)
   (match (list (vote-dir v) dir)
-    [(list 1 "up")
+    [(list 1 1)
      (alter-vote db id "down")]
-    [(list 1 "down")
+    [(list 1 0)
      (for ([i 2]) (alter-vote db id "down"))
      (new-vote-func)]
-    [(list 0 "up")
+    [(list 0 1)
      (for ([i 2]) (alter-vote db id "up"))
      (new-vote-func)]
-    [(list 0 "down")
+    [(list 0 0)
      (alter-vote db id "up")]))
 
+
+; consume type uid id and dir and return a function that will alter that vote
+; number,number, number, number -> function
+(define (vote-change type uid id dir)
+  (if (equal? type "post")
+      (lambda () (vote->db db (vote 0 uid id -1 POST dir)))
+      (lambda () (vote->db db (vote 0 uid -1 id COMMENT dir)))))
+
+
+; REFACTORING IN PROGRESS !!!!!
 ; consume request return previous page
 (define (submit-vote r)
   (let* ([bindings (request-bindings r)]
          [type (extract-binding/single 'type bindings)]
          [id (string->number (extract-binding/single 'id bindings))]
-         [dir (extract-binding/single 'dir bindings)]
+         [dir (string->number (extract-binding/single 'dir bindings))]
          [uid (user-id (current-user db r))])
+
     (cond
       [(equal? type "post")
+       
        (if (user-voted-on-post db uid id)
+           
            (let ([v (get-post-vote db uid id)])
              (pid-delete-vote db uid id)
-             (handle-vote-change v dir id uid alter-post-vote (lambda () (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN))))))
-           (begin (vote->db db (vote 0 uid id -1 POST (if (equal? dir "up") UP DOWN))) ; New Vote
+             (handle-vote-change v dir id uid alter-post-vote (vote-change type uid id dir)))
+           (begin (vote->db db (vote 0 uid id -1 POST dir)) ; New Vote
                   (alter-post-vote db id dir)))]
       [else
        (if (user-voted-on-comm? db uid id)
+           
            (let ([v (get-comm-vote db uid id)])
              (cid-delete-vote db uid id)
-             (handle-vote-change v dir id uid alter-comm-vote (lambda () (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN))))))
-           (begin (vote->db db (vote 0 uid -1 id COMMENT (if (equal? dir "up") UP DOWN))) ; New Vote
+             (handle-vote-change v dir id uid alter-comm-vote (vote-change type uid id dir)))
+           (begin (vote->db db (vote 0 uid -1 id COMMENT dir)) ; New Vote
                   (alter-post-vote db id dir)))]))
+  
   (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))))
 
 

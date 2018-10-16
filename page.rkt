@@ -117,10 +117,10 @@
 (define (render-voters type id vote)
   `(span ((class "voters"))
          (a ((class ,(string-append "voter-link " (if (and vote (= (vote-dir vote) 1)) "voted" "")))
-             (href ,(string-append "/vote?type=" type "&id=" (number->string id) "&dir=up")))
+             (href ,(string-append "/vote?type=" type "&id=" (number->string id) "&dir=1")))
             (span ((class "voter")) "▲"))
          (a ((class ,(string-append "voter-link " (if (and vote (= (vote-dir vote) 0)) "voted" "")))
-             (href ,(string-append "/vote?type=" type "&id=" (number->string id) "&dir=down")))
+             (href ,(string-append "/vote?type=" type "&id=" (number->string id) "&dir=0")))
             (span ((class "voter")) "▼"))))
 
 
