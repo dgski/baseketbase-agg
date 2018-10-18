@@ -355,6 +355,12 @@
 (define (cid-delete-vote db uid cid)
   (query-exec db "DELETE FROM votes WHERE uid = ? AND cid = ?;" uid cid))
 
+; delete vote from db using appropriate function
+(define (delete-vote type db uid id)
+  (if (equal? type "post")
+      (pid-delete-vote db uid id)
+      (cid-delete-vote db uid id)))
+
 ; consume uid, pid and return vote information
 (define (get-post-vote db uid pid)
   (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND pid = ?" uid pid)])
@@ -365,6 +371,13 @@
   (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND cid = ?" uid cid)])
     (if (null? v) #f (vector->vote (car v)))))
 
+; consume type, db, uid and id and return vote information using proper function
+(define (get-vote type db uid id)
+  (if (equal? type "post")
+      (get-post-vote db uid id)
+      (get-comm-vote db uid id)))
+
+
 ; consume type, dbm, uid, id and return whether user has voted on given item
 (define (user-voted type db uid id)
   (let* ([col (if (equal? type "post") "pid" "cid")]
@@ -372,7 +385,16 @@
          [v (query-rows db q-string uid id)])
     (if (null? v) #f #t)))
 
+; use proper function to alter item vote
+(define (alter-vote type db id dir)
+  (if (equal? type "post")
+      (alter-post-vote db id dir)
+      (alter-comm-vote db id dir)))
 
+(define (create-new-vote type db uid id dir)
+  (if (equal? type "post")
+      (vote->db db (vote 0 uid id -1 POST dir))
+      (vote->db db (vote 0 uid -1 id COMMENT dir))))
 
 
 ; # EXPORTS
