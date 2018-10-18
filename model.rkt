@@ -355,25 +355,24 @@
 (define (cid-delete-vote db uid cid)
   (query-exec db "DELETE FROM votes WHERE uid = ? AND cid = ?;" uid cid))
 
-; consume uid, pid and return whether user voted on this post already
-(define (user-voted-on-post db uid pid)
-  (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND pid = ?" uid pid)])
-    (if (null? v) #f #t)))
-
 ; consume uid, pid and return vote information
 (define (get-post-vote db uid pid)
   (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND pid = ?" uid pid)])
     (if (null? v) #f (vector->vote (car v)))))
 
-; consume uid, pid and return whether user voted on this comment already
-(define (user-voted-on-comm? db uid cid)
-  (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND cid = ?" uid cid)])
-    (if (null? v) #f #t)))
-
 ; consume uid, cid and return vote information
 (define (get-comm-vote db uid cid)
   (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND cid = ?" uid cid)])
     (if (null? v) #f (vector->vote (car v)))))
+
+; consume type, dbm, uid, id and return whether user has voted on given item
+(define (user-voted type db uid id)
+  (let* ([col (if (equal? type "post") "pid" "cid")]
+         [q-string (string-append "SELECT * FROM votes WHERE uid = ? AND " col " = ?")]
+         [v (query-rows db q-string uid id)])
+    (if (null? v) #f #t)))
+
+
 
 
 ; # EXPORTS

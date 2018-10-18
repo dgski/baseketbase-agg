@@ -135,19 +135,26 @@
     (cond
       [(equal? type "post")
        
-       (if (user-voted-on-post db uid id)
+       (if (user-voted type db uid id)
            
            (let ([v (get-post-vote db uid id)])
+             
              (pid-delete-vote db uid id)
+
              (handle-vote-change v dir id uid alter-post-vote (vote-change type uid id dir)))
+           
            (begin (vote->db db (vote 0 uid id -1 POST dir)) ; New Vote
                   (alter-post-vote db id dir)))]
       [else
-       (if (user-voted-on-comm? db uid id)
+       
+       (if (user-voted type db uid id)
            
            (let ([v (get-comm-vote db uid id)])
+             
              (cid-delete-vote db uid id)
+
              (handle-vote-change v dir id uid alter-comm-vote (vote-change type uid id dir)))
+           
            (begin (vote->db db (vote 0 uid -1 id COMMENT dir)) ; New Vote
                   (alter-post-vote db id dir)))]))
   
