@@ -139,7 +139,7 @@
           (create-new-vote type db uid id dir)
           (alter-vote type db id dir)))
   
-    (redirect-to (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r)))))))
+    (redirect-to (referer-direct))))
 
 
 ; consume item p and attach 
@@ -257,7 +257,7 @@
          [currcomm (id->db->comment db cid)]
          [curr-uid (user-id (current-user db r))]
          [uid (comment-uid currcomm)]
-         [dest-url (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r))))])
+         [dest-url (referer-direct)])
     
     (begin
       (when (= uid curr-uid) (delete-comment-db db cid))

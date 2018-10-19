@@ -87,5 +87,10 @@
     (lambda args
       (if (test args) (apply f args) dest))))
 
+
+(define (referer-direct)
+  (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r)))))
+
+
 ; # EXPORTS
 (provide (all-defined-out))
