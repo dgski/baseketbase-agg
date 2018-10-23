@@ -88,7 +88,7 @@
       (if (test args) (apply f args) dest))))
 
 
-(define (referer-direct)
+(define (referer-direct r)
   (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r)))))
 
 

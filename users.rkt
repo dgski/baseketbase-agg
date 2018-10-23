@@ -43,6 +43,22 @@
                            (button ((class "our-button") (style "width: 125px")) "save changes"))
                      (br)
                      (a ((href "/delete-account"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "delete account")))))))
+
+
+
+; consume request and return the inbox page
+(define (inbox-page r)
+  (page r
+        "inbox"
+        (let* ([uid (user-id (current-user db r))]
+               [comments (get-inbox-comments db uid)])
+          `(div ((class "items"))
+                (div ((class "userpage-holder"))
+                     (div ((class "comment-box") (style "padding-top: 25px;"))
+                          (h3 "Inbox")
+                          ,@(if (null? comments)
+                                `("No replies yet.")
+                                (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f)))))))))
               
   
 

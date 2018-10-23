@@ -54,6 +54,7 @@
    [("user" (integer-arg)) user-page]
    [("comment" (integer-arg)) comment-page]
    [("delete-account") (logreq delete-account)]
+   [("inbox") (logreq inbox-page)]
    
    ; Receiving Data
    [("submit") (logreq submit-page)]

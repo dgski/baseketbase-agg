@@ -241,6 +241,11 @@
   (* (comment-score (car x)) (expt POST_DECAY_RATE (- (current-datetime) (comment-datetime (car x))))))
 
 
+(define (get-inbox-comments db uid)
+  (map (lambda (x) (list (vector->comment x) '())) (query-rows db "SELECT * FROM comments c1 JOIN comments c2 ON c1.replyto = c2.id WHERE c2.uid = ?" uid)))
+
+
+
 ; # USERS
 
 ; User convenience struct

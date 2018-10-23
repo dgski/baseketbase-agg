@@ -139,7 +139,7 @@
           (create-new-vote type db uid id dir)
           (alter-vote type db id dir)))
   
-    (redirect-to (referer-direct))))
+    (redirect-to (referer-direct r))))
 
 
 ; consume item p and attach 
@@ -257,7 +257,7 @@
          [currcomm (id->db->comment db cid)]
          [curr-uid (user-id (current-user db r))]
          [uid (comment-uid currcomm)]
-         [dest-url (referer-direct)])
+         [dest-url (referer-direct r)])
     
     (begin
       (when (= uid curr-uid) (delete-comment-db db cid))

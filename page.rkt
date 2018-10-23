@@ -80,9 +80,10 @@
   (let* ([user-link-string (string-append "user/" (number->string (user-id user)))]
          [username (user-username user)]
          [links (map create-heading-link KNOWN_LINKS)]
+         [user-inbox (list (create-heading-link (list "inbox" "inbox")))]
          [user-link (list (create-heading-link (list user-link-string username) "username"))])
     
-    (render-heading sorter? order (append links user-link))))
+    (render-heading sorter? order (append links user-inbox user-link))))
 
 ; render website heading for new user
 (define (render-less-heading sorter? order)
