@@ -74,6 +74,14 @@
                                    ("type" "INTEGER") ; 0 - post, 1 - comment
                                    ("dir" "INTEGER")))) "votes table already exists")
 
+(if (not (table-exists? db "inbox"))
+    (query-exec db (create-table "inbox"
+                                 '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                   ("uid" "INTEGER")
+                                   ("cid" "INTEGER")
+                                   ("seen" "INTEGER")))) "inbox table already exists")
+
+
 ; Add Sample Posts Into db
 ; (struct post (id uid pos neg score datetime title url body numcomm section))
 (define sample-posts (list (post 0 1 999 234 1234 0 "Incredible Sights" "Bill Thompson" "" 4 "front")

@@ -185,9 +185,9 @@
 
 ; consume a comment id and return a string representing a reply link to it
 ; number -> string
-(define (create-reply-link render-reply cid)
+(define (create-reply-link render-reply cid pid)
   (if render-reply
-      `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid=" (number->string cid) "&pid=" (number->string cid)))) "reply")
+      `(a ((class "reply-link") (href ,(string-append "/reply-comment?cid=" (number->string cid) "&pid=" (number->string pid)))) "reply")
       ""))
 
 ; consume a comment id and return a string representing a delete link to it
@@ -204,11 +204,12 @@
          [replies (cadr comments-list)]
          [cid (comment-id current)]
          [uid (comment-uid current)]
+         [pid (comment-pid current)]
          [body (comment-body current)]
          [datetime (posix->string (comment-datetime current) DEFAULT_DATETIME_FORMAT)]
          [voters (render-voters "comment" cid (if curr-user (get-comm-vote db (user-id curr-user) cid) #f))]
          [user-link (create-user-link uid)]
-         [reply-link (create-reply-link render-reply cid)]
+         [reply-link (create-reply-link render-reply cid pid)]
          [delete-link (create-delete-link render-reply uid curr-user cid)])
 
     `(div ((class "comment"))

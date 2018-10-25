@@ -242,9 +242,7 @@
 
 
 (define (get-inbox-comments db uid)
-  (map (lambda (x) (list (vector->comment x) '())) (query-rows db "SELECT * FROM comments c1 JOIN comments c2 ON c1.replyto = c2.id WHERE c2.uid = ?" uid)))
-
-
+  (map (lambda (x) (list (vector->comment x) '())) (query-rows db "SELECT * FROM comments c1 JOIN comments c2 JOIN inbox i ON c1.replyto = c2.id WHERE c2.uid = ? AND (i.uid = ? AND i.cid = c2.id)" uid uid)))
 
 ; # USERS
 
