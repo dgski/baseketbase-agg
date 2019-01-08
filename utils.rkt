@@ -77,7 +77,6 @@
                                             (with-input-from-file (string-append "static/" f)
                                               (lambda () (copy-port (current-input-port) op))))))
 
-
 ; # MISC UTILITIES
 
 ; consumes a test and a dest and returns a wrapping function which checks test and accordingly returns dest

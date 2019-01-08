@@ -48,17 +48,19 @@
 
 ; consume request and return the inbox page
 (define (inbox-page r)
-  (page r
-        "inbox"
-        (let* ([uid (user-id (current-user db r))]
-               [comments (get-inbox-comments db uid)])
+  (let* ([user (current-user db r)]
+         [uid (user-id user)]
+         [comments (get-inbox-comments db uid)])
+    (page r
+          "inbox"
+
           `(div ((class "items"))
                 (div ((class "userpage-holder"))
                      (div ((class "comment-box") (style "padding-top: 25px;"))
                           (h3 "Inbox")
                           ,@(if (null? comments)
                                 `("No replies yet.")
-                                (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f)))))))))
+                                (render-comments comments #f (if (user-logged-in? db r) user #t) #t))))))))
               
   
 

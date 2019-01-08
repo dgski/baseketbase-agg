@@ -23,9 +23,13 @@
 
 ; consume db, request, sorter and order and return appropriate header
 (define (render-according-header db r sorter? order)
-  (if (user-logged-in? db r)
-      (render-logged-heading (current-user db r) sorter? order)
-      (render-less-heading sorter? order)))
+  
+  (let* ([user (if (user-logged-in? db r) (current-user db r) #f)]
+         [message-waiting (if user (any-inbox-messages? db (user-id user)) #f)])
+    
+    (if (user-logged-in? db r)
+        (render-logged-heading user sorter? order message-waiting)
+        (render-less-heading sorter? order))))
 
 ; render website sorter
 (define (render-sorter order)
@@ -76,11 +80,11 @@
       ,(cadr lat)))
   
 ; render website heading for logged in user
-(define (render-logged-heading user sorter? order)
+(define (render-logged-heading user sorter? order message-waiting)
   (let* ([user-link-string (string-append "user/" (number->string (user-id user)))]
          [username (user-username user)]
          [links (map create-heading-link KNOWN_LINKS)]
-         [user-inbox (list (create-heading-link (list "inbox" "inbox")))]
+         [user-inbox (list (create-heading-link (list "inbox" "inbox") (if message-waiting " heading-link message-waiting" "heading-link")))]
          [user-link (list (create-heading-link (list user-link-string username) "username"))])
     
     (render-heading sorter? order (append links user-inbox user-link))))

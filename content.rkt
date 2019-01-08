@@ -137,7 +137,7 @@
           (handle-vote-change v dir id uid type (vote-change type uid id dir)))
         (begin
           (create-new-vote type db uid id dir)
-          (alter-vote type db id dir)))
+          (alter-vote type db id (if (= dir 1) "up" "down"))))
   
     (redirect-to (referer-direct r))))
 
@@ -175,8 +175,8 @@
                        ,(string-append numcom " comments")))))))
 
 ; consume a list of comments and return a X-expr representing it
-(define (render-comments comms render-reply u)
-    (map (lambda (x) (render-comment x 0 render-reply u)) comms))
+(define (render-comments comms render-reply u [hilight? #f])
+    (map (lambda (x) (render-comment x 0 render-reply u hilight?)) comms))
 
 ; consume a user id and return a string representing a link to that user page
 ; number -> string
@@ -199,9 +199,10 @@
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
 ; comment number -> X-expr
-(define (render-comment comments-list depth render-reply curr-user)
+(define (render-comment comments-list depth render-reply curr-user [hilight-comments #f]) ; hilighting is for inbox
   (let* ([current (car comments-list)]
          [replies (cadr comments-list)]
+         [hilight? (if hilight-comments (caddr comments-list) #f)]
          [cid (comment-id current)]
          [uid (comment-uid current)]
          [pid (comment-pid current)]
@@ -212,8 +213,10 @@
          [reply-link (create-reply-link render-reply cid pid)]
          [delete-link (create-delete-link render-reply uid curr-user cid)])
 
+    (write hilight?)(newline)
+    
     `(div ((class "comment"))
-          (div ((class "comment-aligner"))
+          (div ((class ,(if hilight? "comment-aligner inbox-unread" "comment-aligner")))
                (div ((class "comment-content"))
                     (div ((class "comment-username")) ,voters ,user-link ,reply-link ,delete-link)
                     (div ((class "comment-body")) ,body))
@@ -277,6 +280,11 @@
          [post-url (string-append "/post/" (number->string pid))])
   
   (begin (comment->db db new-comment)
+         (when (not (= replyto -1))
+           (inbox-msg->db db (inbox-msg 0
+                                        (comment-uid (id->db->comment db replyto))
+                                        (get-most-recent-cid db uid)
+                                        0)))
          (inc-comment-db db pid)
          (redirect-to post-url))))
 
@@ -292,5 +300,8 @@
                                       (div ((style "padding-bottom: 20px; text-align: left"))
                                            (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
                                       ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
+
+
+
 
 (provide (all-defined-out))

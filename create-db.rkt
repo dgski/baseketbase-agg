@@ -74,6 +74,7 @@
                                    ("type" "INTEGER") ; 0 - post, 1 - comment
                                    ("dir" "INTEGER")))) "votes table already exists")
 
+; Create inbox table
 (if (not (table-exists? db "inbox"))
     (query-exec db (create-table "inbox"
                                  '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")

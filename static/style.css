@@ -73,6 +73,15 @@ body {
     padding-right: 0px;
 }
 
+.message-waiting {
+    font-weight: bold;
+    color: orange;
+}
+
+.inbox-unread {
+    background-color: rgb(255, 241, 215);
+}
+
 .heading-sorter{
     display: flex;
     align-items: center;
@@ -589,4 +598,20 @@ body {
     padding-top: 10px;
     text-align: left;
     line-height: 1.5em;
+}
+
+@media only screen and (max-width: 900px), only screen and (max-device-width: 1200px){
+
+    .items {
+        width: 100%;
+    }
+    
+    .heading-holder {
+        width: 100%;
+    }
+
+    .heading-helper {
+        display: inline-block;
+        width: 100%;
+    }
 }

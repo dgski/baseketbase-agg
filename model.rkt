@@ -238,11 +238,7 @@
 
 ; Calculate the heat level of the comment
 (define (calc-comment-heat x)
-  (* (comment-score (car x)) (expt POST_DECAY_RATE (- (current-datetime) (comment-datetime (car x))))))
-
-
-(define (get-inbox-comments db uid)
-  (map (lambda (x) (list (vector->comment x) '())) (query-rows db "SELECT * FROM comments c1 JOIN comments c2 JOIN inbox i ON c1.replyto = c2.id WHERE c2.uid = ? AND (i.uid = ? AND i.cid = c2.id)" uid uid)))
+  (* (comment-score (car x)) (expt POST_DECAY_RATE (- (current-datetime) (comment-datetime (car x))))))      
 
 ; # USERS
 
@@ -390,6 +386,9 @@
 
 ; use proper function to alter item vote
 (define (alter-vote type db id dir)
+
+  (write dir)(newline)
+  
   (if (equal? type "post")
       (alter-post-vote db id dir)
       (alter-comm-vote db id dir)))
@@ -399,6 +398,45 @@
       (vote->db db (vote 0 uid id -1 POST dir))
       (vote->db db (vote 0 uid -1 id COMMENT dir))))
 
+
+; Struct to Conveniently hold Inbox messages
+(struct inbox-msg (id uid cid seen))
+
+; vector -> inbox-msg
+(define (vector->inbox-msg v)
+  (inbox-msg (vector-ref v 0)
+             (vector-ref v 1)
+             (vector-ref v 2)
+             (vector-ref v 3)))
+
+; Get a users most recent comment
+(define (get-most-recent-cid db uid)
+  (let ([v (query-row db "SELECT * FROM comments WHERE uid = ? ORDER BY id DESC LIMIT 1" uid)])
+    (if (null? v) #f (vector-ref v 0))))
+
+; Insert Inbox Message Into Database
+(define (inbox-msg->db db x)
+  (query-exec db "INSERT INTO inbox (uid, cid, seen) VALUES (?,?,?)"
+              (inbox-msg-uid x)
+              (inbox-msg-cid x)
+              (inbox-msg-seen x)))
+
+; Delete Inbox Message From Database
+(define (delete-inbox-msg id) id)
+
+; Grab a users inbox from the database
+(define (get-inbox-comments db uid)
+  (~> (query-rows db "SELECT * FROM inbox WHERE uid = ?" uid )
+      (map (lambda (x) (vector->inbox-msg x)) _)
+      (map (lambda (x) (list (id->db->comment db (inbox-msg-cid x)) '() (= (inbox-msg-seen x) 0))) _)
+      (sort _ (lambda (a b) (> (comment-datetime (car a)) (comment-datetime (car b)))))))
+
+; Check if user has any inbox messages waiting for them
+(define (any-inbox-messages? db uid)
+  (not (null? (query-rows db "SELECT * FROM inbox WHERE uid = ? AND seen = 0" uid ))))
+
+(define (see-all-inbox-items db uid)
+  (query-exec db "UPDATE inbox SET seen = 1 WHERE uid = ?" uid))
 
 ; # EXPORTS
 (provide (all-defined-out))
