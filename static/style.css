@@ -73,6 +73,12 @@ body {
     padding-right: 0px;
 }
 
+.heading-links-helper
+{
+    width: 100%;
+    text-align: right
+}
+
 .message-waiting {
     font-weight: bold;
     color: orange;
@@ -110,8 +116,7 @@ body {
     font-size: 14px;
     display: inline-block;
     width: 700px;
-    /*margin-top: 65px;*/
-
+    margin-top: 40px;
 }
 
 .item {
@@ -417,6 +422,9 @@ body {
     padding:25px;
     text-align: left;
     line-height: 1.5em;
+    margin-bottom: 40px;
+    background: linear-gradient(black,navy);
+    color: white;
 }
 
 .login {
@@ -600,10 +608,29 @@ body {
     line-height: 1.5em;
 }
 
+.info-close {
+    float: right;
+    margin-top: -20px;
+    margin-right: -15px;
+    font-size: 16px;
+}
+
+.about {
+    text-align: left;
+    padding-top: 25px;
+}
+
 @media only screen and (max-width: 900px), only screen and (max-device-width: 1200px){
+
+
+    body {
+        text-align: center;
+        
+    }
 
     .items {
         width: 100%;
+        margin-top: 10px;
     }
     
     .heading-holder {
@@ -613,5 +640,97 @@ body {
     .heading-helper {
         display: inline-block;
         width: 100%;
+    }
+
+    .top-items {
+        display: block;
+        padding: 10px;
+        width: 100%;
+    }
+
+    .login {
+        width: calc(100% - 20px);
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    .do-login {
+        width: 100%;
+    }
+
+    .second-items {
+        width: calc(100% - 70px);
+    }
+
+    .our-button {
+        margin: none;
+    }
+
+    .our-input {
+        display: inline-block;
+        padding: 10px;
+        width: calc(100% - 20px);
+    }
+
+    .info {
+        padding:10px;
+        text-align: left;
+        line-height: 1.5em;
+        margin-bottom: 10px;
+        width: fill;
+    }
+
+    .info-close {
+        margin-top: -10px;
+        margin-right: -5px;
+    }
+
+    .heading-text {
+        display: inline-block;
+        text-align: center;
+        width: 100%;
+    }
+
+    .heading-sorter {
+        display: inline-block;
+        padding: 0px;
+        width: calc(100% -  20px);
+        text-align: center;
+        background-color: lavender;
+        padding: 10px;
+    }
+
+    .sorter-link {
+        padding-left: 10px;
+        padding-right: 10px;
+        font-size: 16px;
+    }
+
+    .heading-links {
+        display: inline-block;
+        padding: 0px;
+        width: calc(100% - 20px);
+        text-align: center;
+        padding: 10px;
+    }
+
+    .heading-links-helper
+    {
+        width: 100%;
+        text-align: center;
+    }
+
+    .heading-link {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .about {
+        padding: 10px;
+        width: calc(100% - 20px);
+    }
+
+    .comment-replies {
+        padding-left: 20px;
     }
 }

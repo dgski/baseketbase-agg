@@ -86,8 +86,8 @@
 
 ; welcome banner constant
 (define welcome-banner
-  `(div ((class "info") (style "margin-bottom: 40px; background: linear-gradient(black,navy); color: white;"))
-        (a ((href "/hide-banner") (class "heading-link") (style "float: right; margin-top: -20px; margin-right: -15px; font-size: 16px;")) "x")
+  `(div ((class "info"))
+        (a ((href "/hide-banner") (class "heading-link info-close")) "x")
         (h3 ((style "margin-top: 0px;")) "Welcome to Our Site!")
         "This is a minimal online news aggregator. You can see links that others think are interesting or noteworthy, be part of engaging discussions in the comments section, and submit your own links too!"))
 
@@ -95,7 +95,7 @@
 ; consume a list of items and return X-expr representing it
 ; list of item -> X-expr
 (define (render-posts posts order start end [render-banner #t])
-  `(div ((class "items") (style "margin-top: 40px;"))
+  `(div ((class "items"))
         ,(if render-banner welcome-banner "")
         ,@(map render-post posts)
         ,(render-footer order start end (length posts))))

@@ -56,7 +56,7 @@
 
                   ; render links
                   (div ((class "heading-links"))
-                       (div ((style "width: 100%; text-align: right")) ,@links))))))
+                       (div ((class "heading-links-helper")) ,@links))))))
 
 ; links visible to anonymous user
 (define ANON_LINKS
@@ -144,7 +144,7 @@
 (define (about-page r)
   (page r
         "About"
-        `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
+        `(div ((class "items about"))
               (h3 "About This Site")
               (p ((style "line-height: 1.5em"))
                  "Basketbase is a link aggregator/simple publishing platform ala Reddit. It is light and simple deploy. It's primary design goal is to be minimalist and an example of timeless design."

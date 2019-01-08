@@ -66,15 +66,16 @@
 
 ;consumes request and produces X-xexpr representing the login page
 (define (login-page r)
-  (user->db! db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234")))
   (page r
         "Login"
         '(div ((class "items"))
               (div ((class "top-items"))
-                   (div ((class "top-item login") (style "width: 85px"))
+                   (div ((class "top-item login"))
                         (form ((action "do-login"))
                               (input ((class "our-input") (type "text") (placeholder "username") (name "username")))
+                              (br)
                               (input ((class "our-input") (type "password") (placeholder "password") (name "password")))
+                              (br)
                               (button ((class "our-button")) "continue")))
                    (div ((class "second-items info"))
                         "Welcome to #.minimal!"
@@ -117,10 +118,12 @@
           "Sign Up"
           `(div ((class "items"))
                 (div ((class "top-items"))
-                     (div ((class "top-item login") (style "width: 85px"))
+                     (div ((class "login"))
                           (form ((action "do-signup"))
                                 (input ((class "our-input") (type "text") (placeholder "username") (name "username")))
+                                (br)
                                 (input ((class "our-input") (type "password") (placeholder "password") (name "password")))
+                                (br)
                                 (button ((class "our-button")) "continue")))
                      (div ((class "second-items info")) ,contents))))))
    
