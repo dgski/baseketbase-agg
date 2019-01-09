@@ -16,7 +16,7 @@
         [post (pid->db->post db id)])
     (page r
           "Post Page"
-          `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
+          `(div ((class "items"))
                 ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
                 ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
 
@@ -60,7 +60,7 @@
 (define (submit-page r)
   (page r
    "basketbase - Submit Page"
-   `(div ((class "items"))
+   `(div ((class "items about"))
          (div ((class "submit"))
               (form ((action "submit-new-post"))
                     (p "Submit something new:")

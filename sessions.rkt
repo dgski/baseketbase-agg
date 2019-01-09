@@ -102,7 +102,7 @@
         (redirect-to "/signup?message=Username is taken - Try again.")
         (begin
           (user->db db(user 'null-it-autoincrements username "" "" (hashpass password)))
-          (attempt-user-login r db)))))
+          (attempt-user-login r)))))
 
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function
