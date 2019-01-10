@@ -105,7 +105,8 @@
                                                  (user-username curruser)
                                                  email
                                                  profile
-                                                 password)))
+                                                 password
+                                                 0 ))) ;deleted
     (redirect-to "/account")))
 
 ; consume request, return X-expr representing sign-up page
@@ -138,7 +139,7 @@
                      (p ((class "our-paragraph"))
                         "Are you sure you want to delete this account?")
                      (a ((href "/account"))(button ((class "our-button") (style "width: 125px")) "no"))
-                     (a ((href "/delete-account-now"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "yes")))))))
+                     (a ((href "/do-delete-account"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "yes")))))))
 
 ; consume a database connection and a user id, and return the users most recent comments
 ; db, number -> list
@@ -153,32 +154,42 @@
       ((lambda (x) (if (< (length x) 5) x (take x 5))) _)
       (map (attach-comments-to-post r) _)))
 
+; consume a request, return a page that says user does not exist
+(define (no-user-page r)
+  (page r
+        "User Does Not Exist"
+        `(div ((class "items about"))
+              (h1 "User Does Not Exist")
+              (p "This user either deleted their account or never existed in the first place!"))))
+
 ; consume a request, return a page that describes a user account
 (define (user-page r uid)
   (let ([user (id->db->user db uid)]
         [comments (get-recent-user-comments db uid)]
         [posts (~> (get-recent-user-posts r db uid)
                    (map render-post _))])
-    (page r
-          "User"
-          `(div ((class "items"))
-                (div ((class "userpage-holder"))
+    (if (equal? (user-deleted user) 1)
+        (no-user-page r)
+        (page r
+              "User"
+              `(div ((class "items"))
+                    (div ((class "userpage-holder"))
                      
-                     (h3 ,(string-append "Profile for '" (user-username user) "'"))
-                     (p ((class "our-paragraph"))
-                        ,(if (non-empty-string? (user-profile user)) (user-profile user) "This user has not filled out their profile.")
-                        (br)
-                        (br)
-                        (a ((href "/report"))
-                           (button ((class "our-button")) "report")))
+                         (h3 ,(string-append "Profile for '" (user-username user) "'"))
+                         (p ((class "our-paragraph"))
+                            ,(if (non-empty-string? (user-profile user)) (user-profile user) "This user has not filled out their profile.")
+                            (br)
+                            (br)
+                            (a ((href "/report"))
+                               (button ((class "our-button")) "report")))
                      
-                     (h3 "Submissions")
-                     ,@posts
-                     ,(if (null? posts) "This user has not submitted any content yet." "")
-                     (div ((class "comment-box") (style "padding-top: 25px;"))
-                          (h3 "Comments")
-                          ,@(if (null? comments)
-                                `("This user has not posted any comments yet.")
-                                (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f)))))))))
+                         (h3 "Submissions")
+                         ,@posts
+                         ,(if (null? posts) "This user has not submitted any content yet." "")
+                         (div ((class "comment-box") (style "padding-top: 25px;"))
+                              (h3 "Comments")
+                              ,@(if (null? comments)
+                                    `("This user has not posted any comments yet.")
+                                    (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f))))))))))
 
 (provide (all-defined-out))

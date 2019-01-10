@@ -13,7 +13,8 @@
                                            ("username" "TEXT")
                                            ("email" "TEXT")
                                            ("profile" "TEXT")
-                                           ("passhash" "TEXT")))) "users table already exists")
+                                           ("passhash" "TEXT")
+                                           ("deleted" "INTEGER DEFAULT 0")))) "users table already exists")
 
 ;Create Posts table
 (if (not (table-exists? db "posts"))
@@ -109,5 +110,5 @@
 (comment->db db (comment 1 2 1 3 4 5 1000 "Third level down." 2))
 
 ; Add Sample users
-(user->db db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234")))
-(user->db db (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx"))
+(user->db db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234") 0))
+(user->db db (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx" 0))

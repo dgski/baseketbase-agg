@@ -101,8 +101,18 @@
     (if (username->db->user db username)
         (redirect-to "/signup?message=Username is taken - Try again.")
         (begin
-          (user->db db(user 'null-it-autoincrements username "" "" (hashpass password)))
+          (user->db db(user 'null-it-autoincrements username "" "" (hashpass password) 0))
           (attempt-user-login r)))))
+
+(define (attempt-user-delete r)
+  (let* ([user (current-user db r)]
+         [uid (user-id user)])
+    (begin (mark-user-deleted-db db uid)
+           (delete-inbox-uid-db db uid)
+           (scrub-comments-uid-db db uid)
+           (scrub-posts-uid-db db uid))
+    (attempt-user-logout r)))
+  
 
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function

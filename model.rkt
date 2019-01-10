@@ -75,6 +75,10 @@
 (define (delete-post-db db pid)
   (query-exec db "DELETE FROM posts WHERE id = ?" pid))
 
+; consume database and uid and delete all posts with that uid
+(define (scrub-posts-uid-db db uid)
+  (begin (query-exec db "UPDATE posts SET body = 'deleted', url = '', title = 'deleted' WHERE uid = ?" uid)))
+
 ; consumes db result vector and returns post
 ; db_result -> post
 (define (vector->post x)
@@ -221,6 +225,11 @@
 (define (delete-comment-db db cid)
   (query-exec db "DELETE FROM comments WHERE id = ?" cid))
 
+; Delete all comments with uid
+; db, uid -> delete from db
+(define (scrub-comments-uid-db db uid)
+  (query-exec db "UPDATE comments SET body = 'deleted' WHERE uid = ?" uid))
+
 ; Update the vote tallys for this comment
 (define (alter-comm-vote db id dir)
   (let ([currcomm (id->db->comment db id)])
@@ -243,7 +252,7 @@
 ; # USERS
 
 ; User convenience struct
-(struct user (id username email profile passhash))
+(struct user (id username email profile passhash deleted))
 
 ; Consume vector and return user
 (define (vector->user u)
@@ -251,7 +260,8 @@
         (vector-ref u 1)
         (vector-ref u 2)
         (if (sql-null? (vector-ref u 3)) "" (vector-ref u 3))
-        (vector-ref u 4)))
+        (vector-ref u 4)
+        (vector-ref u 5)))
 
 ; Add user to database
 (define (user->db db x)
@@ -281,9 +291,14 @@
 
 ; Consume a uid and return the username
 ; number -> string
-
 (define (uid->db->string db uid)
-  (vector-ref (query-row db "SELECT * FROM users WHERE id = ?" uid) 1))
+  (let ([user (vector->user (query-row db "SELECT * FROM users WHERE id = ?" uid))])
+    (if (= (user-deleted user) 1) "deleted" (user-username user))))
+
+; Delete a User from the database
+; db, uid -> delete user from database
+(define (mark-user-deleted-db db uid)
+  (query-exec db "UPDATE users SET deleted = 1 WHERE id = ?" uid))
 
 
 ; # SESSIONS
@@ -398,6 +413,11 @@
       (vote->db db (vote 0 uid id -1 POST dir))
       (vote->db db (vote 0 uid -1 id COMMENT dir))))
 
+; Delete all votes by user from database
+; db,uid -> delete votes
+(define (delete-votes-uid-db db uid)
+  (query-exec db "DELETE FROM votes WHERE uid = ?" uid))
+
 
 ; Struct to Conveniently hold Inbox messages
 (struct inbox-msg (id uid cid seen))
@@ -421,9 +441,6 @@
               (inbox-msg-cid x)
               (inbox-msg-seen x)))
 
-; Delete Inbox Message From Database
-(define (delete-inbox-msg id) id)
-
 ; Grab a users inbox from the database
 (define (get-inbox-comments db uid)
   (~> (query-rows db "SELECT * FROM inbox WHERE uid = ?" uid )
@@ -435,8 +452,13 @@
 (define (any-inbox-messages? db uid)
   (not (null? (query-rows db "SELECT * FROM inbox WHERE uid = ? AND seen = 0" uid ))))
 
+; Mark all items in inbox as seen
 (define (see-all-inbox-items db uid)
   (query-exec db "UPDATE inbox SET seen = 1 WHERE uid = ?" uid))
+
+; Delete all inbox items from a given user
+(define (delete-inbox-uid-db db uid)
+  (query-exec db "DELETE FROM inbox WHERE uid = ?" uid))
 
 ; # EXPORTS
 (provide (all-defined-out))

@@ -53,7 +53,6 @@
    [("submit-new-post") (logreq submit-post)]
    [("user" (integer-arg)) user-page]
    [("comment" (integer-arg)) comment-page]
-   [("delete-account") (logreq delete-account)]
    [("inbox") (logreq inbox-page)]
    
    ; Receiving Data
@@ -71,6 +70,8 @@
    [("do-logout") (logreq attempt-user-logout)]
    [("signup") (nonlogreq sign-up-page)]
    [("do-signup") (nonlogreq attempt-user-signup)]
+   [("delete-account") (logreq delete-account)]
+   [("do-delete-account") (logreq attempt-user-delete)]
    [("hide-banner") (nonlogreq hide-banner)]
 
    ; Utilities
