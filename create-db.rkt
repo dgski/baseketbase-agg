@@ -103,6 +103,17 @@
                            ))
 (map (lambda (x) (post->db db x)) sample-posts)
 
+
+; Create reported table
+(if (not (table-exists? db "reported"))
+    (query-exec db (create-table "reported"
+                                 '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                   ("uid" "INTEGER")
+                                   ("why" "TEXT")
+                                   ("datetime" "INTEGER")))) "inbox table already exists")
+
+
+
 ; Add Sample comments
 (comment->db db (comment 1 2 1 3 4 5 1000 "This is a top level comment" -1))
 (comment->db db (comment 1 2 1 3 4 5 1000 "This is a reply" 1))

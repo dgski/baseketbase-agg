@@ -180,7 +180,7 @@
                             ,(if (non-empty-string? (user-profile user)) (user-profile user) "This user has not filled out their profile.")
                             (br)
                             (br)
-                            (a ((href "/report"))
+                            (a ((href ,(string-append "/report-user/" (number->string (user-id user)))))
                                (button ((class "our-button")) "report")))
                      
                          (h3 "Submissions")
@@ -191,5 +191,30 @@
                               ,@(if (null? comments)
                                     `("This user has not posted any comments yet.")
                                     (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f))))))))))
+
+
+; consume a request, return a page that allows reporting of user
+(define (report-user r uid)
+  (let ([u (id->db->user db uid)])
+  (page r
+        "Reporting User"
+        `(div ((class "items about"))
+              (h1 ,(string-append "Reporting User '" (user-username u) "'"))
+              (p "Please explain below why would like to report this user?")
+              (form ((action ,(string-append "/do-report-user/" (number->string uid))))
+                    (textarea ((width "fill")
+                                      (placeholder "body")
+                                      (style "margin-bottom: 30px")
+                                      (class "our-input submit-input submit-text-area")
+                                      (name "why")))
+                    (button ((class "our-button") (style "width: 125px")) "report"))))))
+
+; consume a request, report given user
+(define (do-report-user r uid)
+  (let* ([bindings (request-bindings r)]
+         [why (extract-binding/single 'why bindings)])
+  (report-user-db db uid why (current-datetime)))
+  (redirect-to "/"))
+
 
 (provide (all-defined-out))

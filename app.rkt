@@ -73,6 +73,8 @@
    [("delete-account") (logreq delete-account)]
    [("do-delete-account") (logreq attempt-user-delete)]
    [("hide-banner") (nonlogreq hide-banner)]
+   [("report-user" (integer-arg)) (logreq report-user)]
+   [("do-report-user" (integer-arg)) (logreq do-report-user)]
 
    ; Utilities
    [("static" (string-arg)) serve-asset]

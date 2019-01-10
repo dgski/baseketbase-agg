@@ -117,12 +117,12 @@
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function
 ; function -> function
 (define logreq
-  (gate-factory (lambda (a) (user-logged-in? db (car a))) (redirect-to "login")))
+  (gate-factory (lambda (a) (user-logged-in? db (car a))) (redirect-to "/login")))
 
 ; consumes function and returns wrapping lambda which verifies request does not contain valid session information before running function
 ; function -> function
 (define nonlogreq
-  (gate-factory (lambda (a) (not (user-logged-in? db (car a)))) (redirect-to "account")))
+  (gate-factory (lambda (a) (not (user-logged-in? db (car a)))) (redirect-to "/account")))
 
 (provide (all-defined-out))
 (provide (all-from-out web-server/http/id-cookie))

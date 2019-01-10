@@ -460,6 +460,10 @@
 (define (delete-inbox-uid-db db uid)
   (query-exec db "DELETE FROM inbox WHERE uid = ?" uid))
 
+; Insert a user report into the database
+(define (report-user-db db uid why datetime)
+  (query-exec db "INSERT INTO reported (uid, why, datetime) VALUES (?,?,?)" uid why datetime))
+
 ; # EXPORTS
 (provide (all-defined-out))
 (provide (all-from-out db))
