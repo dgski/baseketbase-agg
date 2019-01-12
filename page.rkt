@@ -7,10 +7,24 @@
          "model.rkt"
          "sessions.rkt")
 
+; links visible to anonymous user
+(define ANON_LINKS
+  '(("submit" "submit")
+   ("about" "about")
+   ("login" "sign in")
+   ("signup" "sign up")))
+
+; links visible to known user
+(define KNOWN_LINKS
+  '(("submit" "submit")
+   ("about" "about")
+   ("account" "account")
+   ("do-logout" "sign out")))
+
 ; PAGE RENDERING
 
-; consume a title and an X-expr and return a X-expr for a general page
-; string X-expr -> X-expr
+; consume a title and an x-expression and return a x-expression for a general page
+; string x-expression -> x-expression
 (define (page r page-title content #:sorter [sorter? #f] #:order [order "hot"])
   (response/xexpr
    #:preamble #"<!doctype html>"
@@ -22,6 +36,7 @@
                 ,content))))
 
 ; consume db, request, sorter and order and return appropriate header
+; db, request, boolean, string -> x-expression
 (define (render-according-header db r sorter? order)
   
   (let* ([user (if (user-logged-in? db r) (current-user db r) #f)]
@@ -32,6 +47,7 @@
         (render-less-heading sorter? order))))
 
 ; render website sorter
+; string -> x-expression
 (define (render-sorter order)
   (let ([hot (if (equal? order "hot") "sorter-link-active" "")]
         [new (if (equal? order "new") "sorter-link-active" "")]
@@ -41,6 +57,7 @@
       (a ((class ,(string-append "sorter-link" " " top)) (href "/?sort=top")) "top"))))
 
 ; render website heading
+; boolean, string, list -> x-expression
 (define (render-heading sorter? order links)
   `(div ((class "heading"))
         (div ((class "heading-holder"))
@@ -58,20 +75,6 @@
                   (div ((class "heading-links"))
                        (div ((class "heading-links-helper")) ,@links))))))
 
-; links visible to anonymous user
-(define ANON_LINKS
-  '(("submit" "submit")
-   ("about" "about")
-   ("login" "sign in")
-   ("signup" "sign up")))
-
-; links visible to known user
-(define KNOWN_LINKS
-  '(("submit" "submit")
-   ("about" "about")
-   ("account" "account")
-   ("do-logout" "sign out")))
-
 ; consume a list and a class type and return an X-expr representing an anchor tag
 ; list, string -> X-expr
 (define (create-heading-link lat [css-class "heading-link"])
@@ -80,6 +83,7 @@
       ,(cadr lat)))
   
 ; render website heading for logged in user
+; user, boolean, string, boolean -> x-expression
 (define (render-logged-heading user sorter? order message-waiting)
   (let* ([user-link-string (string-append "user/" (number->string (user-id user)))]
          [username (user-username user)]
@@ -90,10 +94,12 @@
     (render-heading sorter? order (append links user-inbox user-link))))
 
 ; render website heading for new user
+; boolean, string -> x-expression
 (define (render-less-heading sorter? order)
   (render-heading sorter? order (map create-heading-link ANON_LINKS)))
 
-; render website footer
+; render website footer with next and prev links
+; string, number, number, number -> x-expression
 (define (render-footer order start end posts-length)
   `(div ((class "footer"))
         (div ((class "controls"))
@@ -118,7 +124,8 @@
                                              "&end="
                                              (number->string (+ end POSTS_PER_PAGE))))) "next >") "     "))))
 
-; render post voters
+; render post voters (voteup and votedown arrows)
+; string, number, number -> x-expression
 (define (render-voters type id vote)
   `(span ((class "voters"))
          (a ((class ,(string-append "voter-link " (if (and vote (= (vote-dir vote) 1)) "voted" "")))
@@ -130,24 +137,23 @@
 
 
 ; consume request and return the 'not found'
-; request -> X-expr
+; request -> x-expression
 (define (page-not-found r)
   (page r
         "Not Found"
-        `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
+        `(div ((class "items"))
+          (div ((class "info-page"))
               (h3 "Wrong Turn, Bro!")
-              (p ((style "line-height: 1.5em"))
-                 "The page you requested does not exist..."))))
+              (p "The page you requested does not exist...")))))
 
 ; consume request and return the about page
-; request -> X-expr
+; request -> x-expression
 (define (about-page r)
   (page r
         "About"
         `(div ((class "items about"))
               (h3 "About This Site")
-              (p ((style "line-height: 1.5em"))
-                 "Basketbase is a link aggregator/simple publishing platform ala Reddit. It is light and simple deploy. It's primary design goal is to be minimalist and an example of timeless design."
+              (p "Basketbase is a link aggregator/simple publishing platform ala Reddit. It is light and simple deploy. It's primary design goal is to be minimalist and an example of timeless design."
                  (br)(br)
                  "Designed and developed by David Gorski."))))
 

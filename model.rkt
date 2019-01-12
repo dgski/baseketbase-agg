@@ -95,21 +95,22 @@
         (vector-ref x 10)))
 
 ; Get posts from db
-; -> list
+; db -> list
 (define (get-posts db)  
   (map vector->post (query-rows db "SELECT * FROM posts")))
 
 ; Get post from db with id
-; -> vector
+; db, number -> vector
 (define (pid->db->post db id)
   (vector->post (query-row db "SELECT * FROM posts WHERE id = ?" id)))
 
 ; Get posts from db with uid
-; -> list
+; db, number -> list
 (define (uid->db->posts db uid)
   (map vector->post (query-rows db "SELECT * FROM posts WHERE uid = ?" uid)))
 
 ; Update the vote tallys for this post
+; db, number, string ->
 (define (alter-post-vote db id dir)
   (let ([currpost (pid->db->post db id)])
     (cond
@@ -125,6 +126,7 @@
                    id)])))
 
 ; Update the number of comments for this post
+; db, number -> 
 (define (inc-comment-db db pid)
   (let ([currpost (pid->db->post db pid)])
     (query-exec db "UPDATE posts SET numcom = ? WHERE id = ?"
@@ -132,10 +134,12 @@
                 pid)))
 
 ; Calculate the heat level of the post
+; post -> number
 (define (calc-post-heat x)
   (* (post-score x) (expt POST_DECAY_RATE (- (current-datetime) (post-datetime x)))))
 
 ; consume a string and return list
+; db, string, number, number -> list
 (define (get-sorted-posts db type start end)
   (let ([posts (get-posts db)])
     (list-slice (match type
@@ -231,6 +235,7 @@
   (query-exec db "UPDATE comments SET body = 'deleted' WHERE uid = ?" uid))
 
 ; Update the vote tallys for this comment
+; db, number, string -> 
 (define (alter-comm-vote db id dir)
   (let ([currcomm (id->db->comment db id)])
     (cond
@@ -246,6 +251,7 @@
                    id)])))
 
 ; Calculate the heat level of the comment
+; comment -> number
 (define (calc-comment-heat x)
   (* (comment-score (car x)) (expt POST_DECAY_RATE (- (current-datetime) (comment-datetime (car x))))))      
 
@@ -255,6 +261,7 @@
 (struct user (id username email profile passhash deleted))
 
 ; Consume vector and return user
+; vector -> user
 (define (vector->user u)
   (user (vector-ref u 0)
         (vector-ref u 1)
@@ -271,6 +278,7 @@
               (user-passhash x)))
 
 ; Update user in database
+; db, user ->
 (define (user->db! db x)
   (query-exec db "UPDATE users SET username = ?, email = ?, profile = ?, passhash = ? WHERE id = ?;"
               (user-username x)
@@ -280,11 +288,13 @@
               (user-id x)))
 
 ; Get user from database with username
+; db, string -> user
 (define (username->db->user db username)
   (let ([user-data (query-rows db "SELECT * FROM users WHERE username = ?" username)])
     (if (null? user-data) #f (vector->user (list-ref user-data 0)))))
 
 ; Get user from database with id
+; db, number -> user
 (define (id->db->user db id)
   (let ([user-data (query-rows db "SELECT * FROM users WHERE id = ?" id)])
     (if (null? user-data) #f (vector->user (list-ref user-data 0)))))
@@ -307,6 +317,7 @@
 (struct session (id uid ip useragent expiry))
 
 ; consume session and add to db
+; db, session ->
 (define (session->db db x)
   (query-exec db "INSERT INTO sessions (id, uid, ip, useragent, expiry) VALUES (?,?,?,?,?)"
               (session-id x)
@@ -326,10 +337,12 @@
              (vector-ref x 4))))
 
 ; consume a session id and delete that session
+; db, number ->
 (define (delete-session-db db id)
   (query-exec db "DELETE FROM sessions WHERE id = ?" id))
 
 ; consume a session id and check if it exists
+; db, number -> boolean
 (define (session-exists? db id)
   (not (null? (query-rows db "SELECT * FROM sessions WHERE id = ?" id))))
 
@@ -343,6 +356,7 @@
 (define DOWN 0)
 
 ; consume db result and return vote
+; vector -> vote
 (define (vector->vote x)
   (vote (vector-ref x 0)
         (vector-ref x 1)
@@ -353,6 +367,7 @@
 
 
 ; consume vote and add to db
+; db, vote ->
 (define (vote->db db x)
   (query-exec db "INSERT INTO votes (uid, pid, cid, type, dir) VALUES (?,?,?,?,?)"
               (vote-uid x)
@@ -362,30 +377,36 @@
               (vote-dir x)))
 
 ; delete vote from db
+; db, number, number ->
 (define (pid-delete-vote db uid pid)
   (query-exec db "DELETE FROM votes WHERE uid = ? AND pid = ?;" uid pid))
 
 ; delete vote from db
+; db, number, number ->
 (define (cid-delete-vote db uid cid)
   (query-exec db "DELETE FROM votes WHERE uid = ? AND cid = ?;" uid cid))
 
 ; delete vote from db using appropriate function
+; db, number, number ->
 (define (delete-vote type db uid id)
   (if (equal? type "post")
       (pid-delete-vote db uid id)
       (cid-delete-vote db uid id)))
 
 ; consume uid, pid and return vote information
+; db, number, numder -> vote
 (define (get-post-vote db uid pid)
   (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND pid = ?" uid pid)])
     (if (null? v) #f (vector->vote (car v)))))
 
 ; consume uid, cid and return vote information
+; db, number, number -> vote
 (define (get-comm-vote db uid cid)
   (let ([v (query-rows db "SELECT * FROM votes WHERE uid = ? AND cid = ?" uid cid)])
     (if (null? v) #f (vector->vote (car v)))))
 
 ; consume type, db, uid and id and return vote information using proper function
+; db, number, number -> vote
 (define (get-vote type db uid id)
   (if (equal? type "post")
       (get-post-vote db uid id)
@@ -393,6 +414,7 @@
 
 
 ; consume type, dbm, uid, id and return whether user has voted on given item
+; db, number, number -> boolean
 (define (user-voted type db uid id)
   (let* ([col (if (equal? type "post") "pid" "cid")]
          [q-string (string-append "SELECT * FROM votes WHERE uid = ? AND " col " = ?")]
@@ -400,6 +422,7 @@
     (if (null? v) #f #t)))
 
 ; use proper function to alter item vote
+; string, db, number, number ->
 (define (alter-vote type db id dir)
 
   (write dir)(newline)
@@ -422,6 +445,7 @@
 ; Struct to Conveniently hold Inbox messages
 (struct inbox-msg (id uid cid seen))
 
+; Convert Vector into inbox-msg struct
 ; vector -> inbox-msg
 (define (vector->inbox-msg v)
   (inbox-msg (vector-ref v 0)
@@ -430,11 +454,13 @@
              (vector-ref v 3)))
 
 ; Get a users most recent comment
+; db, number -> number
 (define (get-most-recent-cid db uid)
   (let ([v (query-row db "SELECT * FROM comments WHERE uid = ? ORDER BY id DESC LIMIT 1" uid)])
     (if (null? v) #f (vector-ref v 0))))
 
 ; Insert Inbox Message Into Database
+; db, inbox-msg ->
 (define (inbox-msg->db db x)
   (query-exec db "INSERT INTO inbox (uid, cid, seen) VALUES (?,?,?)"
               (inbox-msg-uid x)
@@ -442,6 +468,7 @@
               (inbox-msg-seen x)))
 
 ; Grab a users inbox from the database
+; db, number -> list
 (define (get-inbox-comments db uid)
   (~> (query-rows db "SELECT * FROM inbox WHERE uid = ?" uid )
       (map (lambda (x) (vector->inbox-msg x)) _)
@@ -449,18 +476,23 @@
       (sort _ (lambda (a b) (> (comment-datetime (car a)) (comment-datetime (car b)))))))
 
 ; Check if user has any inbox messages waiting for them
+; db, number -> boolean
 (define (any-inbox-messages? db uid)
   (not (null? (query-rows db "SELECT * FROM inbox WHERE uid = ? AND seen = 0" uid ))))
 
 ; Mark all items in inbox as seen
+; db, number ->
 (define (see-all-inbox-items db uid)
   (query-exec db "UPDATE inbox SET seen = 1 WHERE uid = ?" uid))
 
 ; Delete all inbox items from a given user
+; db, number ->
 (define (delete-inbox-uid-db db uid)
+  (display "DELETING")(newline)
   (query-exec db "DELETE FROM inbox WHERE uid = ?" uid))
 
 ; Insert a user report into the database
+; db, number, string, number ->
 (define (report-user-db db uid why datetime)
   (query-exec db "INSERT INTO reported (uid, why, datetime) VALUES (?,?,?)" uid why datetime))
 

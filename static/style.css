@@ -620,6 +620,70 @@ body {
     padding-top: 25px;
 }
 
+.account-info {
+    margin-bottom: 70px;
+    padding-top: 25px;
+    text-align: left;
+    padding: 10px;
+}
+
+.info-page {
+    margin-bottom: 70px;
+    padding-top: 25px;
+    text-align: left;
+    padding: 10px;
+}
+
+.standard-btn {
+    width: 125px;
+}
+
+.danger-btn {
+    background-color: brown;
+}
+
+.inbox, .comment-box-special {
+    padding-top: 25px;
+}
+
+p {
+    line-height: 1.5em;
+}
+
+.comment-input {
+    height: 50px;
+}
+
+.user-controls {
+    text-align: left;
+    padding: 5px;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #858cac;
+}
+
+.welcome-header {
+    margin-top: 0px;
+}
+
+.user-link-float-right {
+    float: right;
+}
+
+.comment-page {
+    padding-top: 35px;
+    padding-bottom: 35px
+}
+
+.comment-page-helper {
+    padding-top: 50px
+}
+
+.comment-page-more {
+    padding-bottom: 20px;
+    text-align: left;
+}
+
 @media only screen and (max-width: 900px), only screen and (max-device-width: 1200px){
 
 

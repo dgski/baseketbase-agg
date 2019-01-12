@@ -5,7 +5,6 @@
          web-server/servlet
          web-server/servlet-env)
 
-
 ; COOKIE UTILITIES
 
 ;consumes a list of cookies and a cookie id and returns a boolean value whether this cookie exists in the list
@@ -86,7 +85,8 @@
     (lambda args
       (if (test args) (apply f args) dest))))
 
-
+; consumes a request and returns the string value of the referers url
+; request -> string
 (define (referer-direct r)
   (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r)))))
 

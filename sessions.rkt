@@ -82,8 +82,9 @@
 (define (attempt-user-login r)
   (match-let* ([(list username password) (parse-login-info (request-bindings r))]
               [curr-user (username->db->user db username)])
-    
-    (if [and curr-user (non-empty-string? password) (valid-password? password (user-passhash curr-user))]
+    (if [and curr-user
+             (non-empty-string? password)
+             (valid-password? password (user-passhash curr-user))]
         (let ([sid (gen-sid)])
           (begin (create-add-session sid (user-id curr-user) r) (redirect-to "/" #:headers (single-cookie-header "sid" sid))))
         (redirect-to "login"))))
@@ -95,6 +96,7 @@
   (redirect-to "/" #:headers (list (cookie->header (logout-id-cookie "sid")))))
 
 ; recieves request and db connections and attempts to sign up user
+; request -> redirect
 (define (attempt-user-signup r)
   (match-let* ([login-info (parse-login-info (request-bindings r))]
               [(list username password) login-info])
@@ -104,14 +106,22 @@
           (user->db db(user 'null-it-autoincrements username "" "" (hashpass password) 0))
           (attempt-user-login r)))))
 
+; consumes request and tries to delete given user
+; request -> redirect
 (define (attempt-user-delete r)
-  (let* ([user (current-user db r)]
-         [uid (user-id user)])
-    (begin (mark-user-deleted-db db uid)
-           (delete-inbox-uid-db db uid)
-           (scrub-comments-uid-db db uid)
-           (scrub-posts-uid-db db uid))
-    (attempt-user-logout r)))
+  (match-let* ([(list username password) (parse-login-info (request-bindings r))]
+              [curr-user (current-user db r)]
+              [uid (user-id curr-user)])
+
+             (if [and curr-user
+                      (non-empty-string? password)
+                      (valid-password? password (user-passhash curr-user))]
+                 (begin (mark-user-deleted-db db uid)
+                        (delete-inbox-uid-db db uid)
+                        (scrub-comments-uid-db db uid)
+                        (scrub-posts-uid-db db uid)
+                        (attempt-user-logout r))
+                 (begin (redirect-to "/"))))) ; TODO
   
 
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function

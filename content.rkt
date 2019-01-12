@@ -10,7 +10,7 @@
          "page.rkt")
 
 ; consume request and return the post being requested along with comments
-; request -> X-expr
+; request -> x-expression
 (define (post-page r id)
   (let ([render-reply (user-logged-in? db r)]
         [post (pid->db->post db id)])
@@ -20,13 +20,13 @@
                 ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
                 ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
 
-                (div ((style "text-align: left; padding: 5px; margin-top: 10px; font-size: 12px; color: #858cac"))
+                (div ((class "user-controls"))
                      "posted by "
                      (a ((class "user-link") (href ,(string-append "/user/" (number->string (post-uid post))))) (b ,(uid->db->string db (post-uid post))))
                      " on "
                      ,(posix->string (post-datetime post) DEFAULT_DATETIME_FORMAT)
                      ,(if (and (user-logged-in? db r) (equal? (user-id (current-user db r)) (post-uid post)))
-                          `(a ((class "user-link") (style "float: right") (href ,(string-append "/delete-post?pid=" (number->string (post-id post))))) "delete")
+                          `(a ((class "user-link user-link-float-right") (href ,(string-append "/delete-post?pid=" (number->string (post-id post))))) "delete")
                           ""))
                            
                 (div ((class "comment-box"))
@@ -35,11 +35,10 @@
                                   (action ,(string-append "/add-comment/" (number->string id))))
                                  (div ((class "reply-box-textarea"))
                                       (textarea ((placeholder "New Commment...")
-                                                 (class "our-input submit-input submit-text-area")
-                                                 (style "height: 50px;")
+                                                 (class "our-input submit-input submit-text-area comment-input")
                                                  (name "body"))))
                                  (div ((class "reply-box-button"))
-                                      (button ((class "our-button") (style "margin-right: 0px;")) "Post"))) ""))
+                                      (button ((class "our-button")) "Post"))) ""))
                 
                 ,@(render-comments (pid->db->hotcomms db id) render-reply (if (user-logged-in? db r) (current-user db r) #f))))))
 
@@ -85,10 +84,11 @@
 
 
 ; welcome banner constant
-(define welcome-banner
+; x-expression representing the welcome banner
+(define WELCOME-BANNER
   `(div ((class "info"))
         (a ((href "/hide-banner") (class "heading-link info-close")) "x")
-        (h3 ((style "margin-top: 0px;")) "Welcome to Our Site!")
+        (h3 ((class "welcome-header")) "Welcome to Our Site!")
         "This is a minimal online news aggregator. You can see links that others think are interesting or noteworthy, be part of engaging discussions in the comments section, and submit your own links too!"))
 
 
@@ -96,11 +96,12 @@
 ; list of item -> X-expr
 (define (render-posts posts order start end [render-banner #t])
   `(div ((class "items"))
-        ,(if render-banner welcome-banner "")
+        ,(if render-banner WELCOME-BANNER "")
         ,@(map render-post posts)
         ,(render-footer order start end (length posts))))
 
 ; change vote status in database
+; vote, number, number, number, string, function ->
 (define (handle-vote-change v dir id uid type new-vote-func)
   (match (list (vote-dir v) dir)
     [(list 1 1)
@@ -123,6 +124,7 @@
       (lambda () (vote->db db (vote 0 uid -1 id COMMENT dir)))))
 
 ; consume request return previous page
+; request -> redirect
 (define (submit-vote r)
   (let* ([bindings (request-bindings r)]
          [type (extract-binding/single 'type bindings)]
@@ -142,7 +144,8 @@
     (redirect-to (referer-direct r))))
 
 
-; consume item p and attach 
+; consume item p and attach
+; request -> function
 (define (attach-comments-to-post r)
   (lambda (p)
     (cons p (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id p)) #f))))
@@ -175,6 +178,7 @@
                        ,(string-append numcom " comments")))))))
 
 ; consume a list of comments and return a X-expr representing it
+; list, boolean, user, boolean -> x-expression
 (define (render-comments comms render-reply u [hilight? #f])
     (map (lambda (x) (render-comment x 0 render-reply u hilight?)) comms))
 
@@ -194,7 +198,7 @@
 ; number -> string
 (define (create-delete-link render-reply comment-uid current-uid cid)
   (if (and render-reply (equal? comment-uid current-uid))
-      `(a ((style "padding-left: 0px") (class "reply-link") (href ,(string-append "/delete-comment?cid=" (number->string cid)))) "delete")
+      `(a ((class "reply-link") (href ,(string-append "/delete-comment?cid=" (number->string cid)))) "delete")
       ""))
 
 ; consume a comment and a depth and return a X-expr representing it and all of it's children
@@ -233,11 +237,12 @@
 
 
 ; consume a request, return a page that allows replying to the given comment
+; request -> x-expression
 (define (reply-comment r)
   (let* ([bindings (request-bindings r)]
          [pid (extract-binding/single 'pid bindings)]
          [cid (extract-binding/single 'cid bindings)])
-    (page r "Reply to:" `(div ((class "items") (style "text-align: left;padding-top: 25px;"))
+    (page r "Reply to:" `(div ((class "items info-page"))
                                          (h3 "Replying to:")
                                          ,(render-comment (list (id->db->comment db cid) '()) 0 #f (if (user-logged-in? db r) (current-user db r) #f))
                                          (br)(br)
@@ -245,16 +250,16 @@
                                                 (action ,(string-append "/add-comment/" pid)))
                                                (div ((class "reply-box-textarea"))
                                                     (textarea ((placeholder "New Commment...")
-                                                               (class "our-input submit-input submit-text-area")
-                                                               (style "height: 50px;")
+                                                               (class "our-input submit-input submit-text-area comment-input")
                                                                (name "body")
                                                                (active "")))
                                                     (input ((type "hidden") (name "replyto") (value ,cid))))
                                                (div ((class "reply-box-button"))
-                                                    (button ((class "our-button") (style "margin-right: 0px;")) "Post")))))))
+                                                    (button ((class "our-button")) "Post")))))))
 
 
 ; consume request, if user is allowed to, delete comment, redirect to front-page
+; request -> re-direct
 (define (delete-comment r)
   (let* ([bindings (request-bindings r)]
          [cid (extract-binding/single 'cid bindings)]
@@ -289,15 +294,15 @@
          (redirect-to post-url))))
 
 ; consume request and cid, return X-expr representing comment page
-; request, int -> X-expr
+; request, number -> X-expr
 (define (comment-page r cid)
   (let* ([currcomm (id->db->comment db cid)]
          [currpost (pid->db->post db (comment-pid currcomm))]
          [render-reply (user-logged-in? db r)])
-    (page r "Comment Page" `(div ((class "items") (style "padding-top: 35px; padding-bottom: 35px"))
+    (page r "Comment Page" `(div ((class "items comment-page"))
                                  ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
-                                 (div ((style "padding-top: 50px"))
-                                      (div ((style "padding-bottom: 20px; text-align: left"))
+                                 (div ((class "comment-page-helper"))
+                                      (div ((style "comment-page-more"))
                                            (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
                                       ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
 

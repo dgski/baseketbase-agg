@@ -83,9 +83,17 @@
                                    ("cid" "INTEGER")
                                    ("seen" "INTEGER")))) "inbox table already exists")
 
+; Create reported table
+(if (not (table-exists? db "reported"))
+    (query-exec db (create-table "reported"
+                                 '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
+                                   ("uid" "INTEGER")
+                                   ("why" "TEXT")
+                                   ("datetime" "INTEGER")))) "inbox table already exists")
 
-; Add Sample Posts Into db
-; (struct post (id uid pos neg score datetime title url body numcomm section))
+
+; SAMPLE DATA
+
 (define sample-posts (list (post 0 1 999 234 1234 0 "Incredible Sights" "Bill Thompson" "" 4 "front")
                            (post 0 1 700 234 344 0 "Castles" "http://discover.com" "" 0 "front")
                            (post 0 1 499 234 233 0 "Nothing" "Bill Hulio" "" 0 "front")
@@ -99,27 +107,22 @@
                            (post 0 1 300 0 233 0 "Minimalism: Start Guide" "http://medium.com" "" 0 "front")
                            (post 0 1 109 0 453 0 "Avengers: Infinity War - HISHE" "http://youtube.com" "" 0 "front")
                            (post 0 2 10 0 634 0 "When Life Seems like too much.." "http://basket.base" "" 0 "front")
-                           (post 0 2 54 0 27 0 "Top Museums, Rome - Pictures" "http://instagram.com" "" 0 "front")
-                           ))
-(map (lambda (x) (post->db db x)) sample-posts)
+                           (post 0 2 54 0 27 0 "Top Museums, Rome - Pictures" "http://instagram.com" "" 0 "front")))
 
+(define sample-comments (list (comment 1 2 1 3 4 5 1000 "This is a top level comment" -1)
+                              (comment 1 2 1 3 4 5 1000 "This is a reply" 1)
+                              (comment 1 2 1 3 4 5 1000 "This is another reply" 1)
+                              (comment 1 2 1 3 4 5 1000 "Third level down." 2)))
 
-; Create reported table
-(if (not (table-exists? db "reported"))
-    (query-exec db (create-table "reported"
-                                 '(("id" "INTEGER PRIMARY KEY AUTOINCREMENT")
-                                   ("uid" "INTEGER")
-                                   ("why" "TEXT")
-                                   ("datetime" "INTEGER")))) "inbox table already exists")
+(define sample-users (list (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234") 0)
+                           (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx" 0)))
 
+; Create sample Data for Website
+; ->
+(define (create-sample-data)
+  (begin
+    (map (lambda (x) (post->db db x)) sample-posts)
+    (map (lambda (x) (comment->db db x)) sample-comments)
+    (map (lambda (x) (user->db db x)) sample-users)))
 
-
-; Add Sample comments
-(comment->db db (comment 1 2 1 3 4 5 1000 "This is a top level comment" -1))
-(comment->db db (comment 1 2 1 3 4 5 1000 "This is a reply" 1))
-(comment->db db (comment 1 2 1 3 4 5 1000 "This is another reply" 1))
-(comment->db db (comment 1 2 1 3 4 5 1000 "Third level down." 2))
-
-; Add Sample users
-(user->db db (user 0 "gonzalez" "jose@gonzalez.com" "" (hashpass "1234") 0))
-(user->db db (user 0 "testo_richardson" "testo@gmail.com" "" "xxxxx" 0))
+(create-sample-data)

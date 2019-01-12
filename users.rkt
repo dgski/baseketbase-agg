@@ -16,37 +16,42 @@
   (page r
         (string-append "id" "'s Profile")
         (let ([u (current-user db r)])
-          `(div ((class "items") (style "margin-bottom: 70px;"))
-                (div ((style "padding-top: 25px; text-align: left"))
+          `(div ((class "items"))
+                (div ((class "account-info"))
                      (h3 ,(string-append "Account Information for '" (user-username u) "'"))
                      (form ((action "/update-user-information"))
                            (br)
-                           "Change email:"(br)(br)
+                           "Change email:"
+                           (br)(br)
                            (input ((class "our-input") (value ,(user-email u)) (type "email") (name "email")))
                            (br)(br)
-                           "Change profile:"(br)(br)
+                           "Change profile:"
+                           (br)
+                           (br)
                            (textarea ((width "fill")
                                       (placeholder "body")
-                                      (style "margin-bottom: 30px")
                                       (class "our-input submit-input submit-text-area")
                                       (name "profile"))
                                      ,(user-profile u))
-                           (br)
-                           "Change password:"(br)(br)
+                           (br)(br)
+                           "Change password:"
+                           (br)(br)
                            (input ((class "our-input") (type "password") (placeholder "new password") (name "new-password-1")))
                            (br)
                            (input ((class "our-input") (type "password") (placeholder "re-type new password") (name "new-password-2")))
                            (br)
-                           "Old password to validate changes:"(br)(br)
+                           "Old password to validate changes:"
+                           (br)(br)
                            (input ((class "our-input") (type "password") (placeholder "old password") (name "old-password")))
                            (br)
-                           (button ((class "our-button") (style "width: 125px")) "save changes"))
+                           (button ((class "our-button standard-btn")) "save changes"))
                      (br)
-                     (a ((href "/delete-account"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "delete account")))))))
+                     (a ((href "/delete-account"))(button ((class "our-button standard-btn danger-btn")) "delete account")))))))
 
 
 
 ; consume request and return the inbox page
+; request -> x-expression
 (define (inbox-page r)
   (let* ([user (current-user db r)]
          [uid (user-id user)]
@@ -56,7 +61,7 @@
 
           `(div ((class "items"))
                 (div ((class "userpage-holder"))
-                     (div ((class "comment-box") (style "padding-top: 25px;"))
+                     (div ((class "inbox"))
                           (h3 "Inbox")
                           ,@(if (null? comments)
                                 `("No replies yet.")
@@ -65,6 +70,7 @@
   
 
 ;consumes request and produces X-xexpr representing the login page
+; request -> x-expression
 (define (login-page r)
   (page r
         "Login"
@@ -95,9 +101,7 @@
                [old-password-valid (valid-password? old-pass (user-passhash curruser))]
                [new-passwords-match (equal? new-pass-1 new-pass-2)]
                [email (if (non-empty-string? email) email (user-email curruser))]
-               [password (if (and old-password-valid
-                                  new-passwords-match
-                                  (non-empty-string? new-pass-1))
+               [password (if [and old-password-valid new-passwords-match (non-empty-string? new-pass-1)]
                              (hashpass new-pass-1)
                              (user-passhash curruser))])
     
@@ -110,7 +114,7 @@
     (redirect-to "/account")))
 
 ; consume request, return X-expr representing sign-up page
-; request -> X-expr
+; request -> x-expression
 (define (sign-up-page r)
   (let* ([bindings (request-bindings r)]
          [message (check-and-extract-binding 'message bindings)]
@@ -129,6 +133,7 @@
                      (div ((class "second-items info")) ,contents))))))
    
 ; consume request, return page asking whether user wants to delete their account
+; request -> x-expression
 (define (delete-account r )
   (let ([u (current-user db r)])
     (page r
@@ -138,8 +143,8 @@
                      (h3 ,(string-append "Deleting account '" (user-username u) "'"))
                      (p ((class "our-paragraph"))
                         "Are you sure you want to delete this account?")
-                     (a ((href "/account"))(button ((class "our-button") (style "width: 125px")) "no"))
-                     (a ((href "/do-delete-account"))(button ((class "our-button") (style "background-color: brown; width: 125px")) "yes")))))))
+                     (a ((href "/account"))(button ((class "our-button standard-btn")) "no"))
+                     (a ((href "/do-delete-account"))(button ((class "our-button standard-btn danger-btn")) "yes")))))))
 
 ; consume a database connection and a user id, and return the users most recent comments
 ; db, number -> list
@@ -155,6 +160,7 @@
       (map (attach-comments-to-post r) _)))
 
 ; consume a request, return a page that says user does not exist
+; r -> x-expression
 (define (no-user-page r)
   (page r
         "User Does Not Exist"
@@ -163,6 +169,7 @@
               (p "This user either deleted their account or never existed in the first place!"))))
 
 ; consume a request, return a page that describes a user account
+; request, number -> x-expression
 (define (user-page r uid)
   (let ([user (id->db->user db uid)]
         [comments (get-recent-user-comments db uid)]
@@ -178,22 +185,21 @@
                          (h3 ,(string-append "Profile for '" (user-username user) "'"))
                          (p ((class "our-paragraph"))
                             ,(if (non-empty-string? (user-profile user)) (user-profile user) "This user has not filled out their profile.")
-                            (br)
-                            (br)
+                            (br)(br)
                             (a ((href ,(string-append "/report-user/" (number->string (user-id user)))))
                                (button ((class "our-button")) "report")))
                      
                          (h3 "Submissions")
                          ,@posts
                          ,(if (null? posts) "This user has not submitted any content yet." "")
-                         (div ((class "comment-box") (style "padding-top: 25px;"))
+                         (div ((class "comment-box-special"))
                               (h3 "Comments")
                               ,@(if (null? comments)
                                     `("This user has not posted any comments yet.")
                                     (render-comments comments #f (if (user-logged-in? db r) (current-user db r) #f))))))))))
 
-
 ; consume a request, return a page that allows reporting of user
+; request, number -> x-expression
 (define (report-user r uid)
   (let ([u (id->db->user db uid)])
   (page r
@@ -204,17 +210,17 @@
               (form ((action ,(string-append "/do-report-user/" (number->string uid))))
                     (textarea ((width "fill")
                                       (placeholder "body")
-                                      (style "margin-bottom: 30px")
                                       (class "our-input submit-input submit-text-area")
                                       (name "why")))
-                    (button ((class "our-button") (style "width: 125px")) "report"))))))
+                    (br)(br)
+                    (button ((class "our-button standard-btn")) "report"))))))
 
 ; consume a request, report given user
+; request, number -> redirect
 (define (do-report-user r uid)
   (let* ([bindings (request-bindings r)]
          [why (extract-binding/single 'why bindings)])
   (report-user-db db uid why (current-datetime)))
   (redirect-to "/"))
-
 
 (provide (all-defined-out))
