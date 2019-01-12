@@ -75,15 +75,15 @@
   (page r
         "Login"
         '(div ((class "items"))
-              (div ((class "top-items"))
-                   (div ((class "top-item login"))
+              (div ((class "user-input-page"))
+                   (div ((class "login"))
                         (form ((action "do-login"))
                               (input ((class "our-input") (type "text") (placeholder "username") (name "username")))
                               (br)
                               (input ((class "our-input") (type "password") (placeholder "password") (name "password")))
                               (br)
                               (button ((class "our-button")) "continue")))
-                   (div ((class "second-items info"))
+                   (div ((class "info login-banner"))
                         "Welcome to #.minimal!"
                         (br)(br)
                         "We hope you enjoy being a part of this community!")))))
@@ -122,7 +122,7 @@
     (page r
           "Sign Up"
           `(div ((class "items"))
-                (div ((class "top-items"))
+                (div ((class "user-input-page"))
                      (div ((class "login"))
                           (form ((action "do-signup"))
                                 (input ((class "our-input") (type "text") (placeholder "desired username") (name "username")))
@@ -130,7 +130,7 @@
                                 (input ((class "our-input") (type "password") (placeholder " desired password") (name "password")))
                                 (br)
                                 (button ((class "our-button")) "continue")))
-                     (div ((class "second-items info")) ,contents))))))
+                     (div ((class "info login-banner")) ,contents))))))
    
 ; consume request, return page asking whether user wants to delete their account
 ; request -> x-expression

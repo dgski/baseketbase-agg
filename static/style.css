@@ -57,7 +57,7 @@ p {
 }
 
 .tagline-text {
-    font-size: 14px;
+    font-size: 1em;
 }
 
 .heading-links {
@@ -86,7 +86,7 @@ p {
     background-color: rgb(255, 241, 215);
 }
 
-.heading-sorter{
+.heading-sorter {
     display: flex;
     align-items: center;
     padding-left: 20px;
@@ -133,8 +133,8 @@ p {
     border-bottom-color: rgba(133, 140, 172, 0.171);
     border-bottom-width: 1px;
     border-bottom-style: solid;
-    
 
+    font-size: 14px;
 }
 
 .item-link {
@@ -145,18 +145,19 @@ p {
 }
 
 .item:hover {
-    background-color:aliceblue;
+    background-color: ghostwhite;
 }
 
 
 .title {
     font-weight: bold;
+    font-size: 1em;
 }
 
 .url-sample {
     margin-top: 2px;
     color: rgb(133, 140, 172);
-    font-size: 12px;
+    font-size: 0.9em;
 }
 
 .content {
@@ -203,38 +204,27 @@ p {
     color: rgb(133, 140, 172);
 }
 
-.top-items-helper {
+.user-input-page-helper {
     width: 80%;
     max-width: 1000px;
     display: inline-block;
 }
 
-.top-items {
+.user-input-page {
     display: flex;
     padding-top: 35px;
     padding-bottom: 35px;
-    font-size: 14px;
+    font-size: 1em;
 }
 
-.top-item {
+.login {
     flex: 1 auto;
-    width: calc(50% - 44px);
-    padding: 44px;
-    padding-left: 0px;
-    padding-top: 0px;
-    padding-bottom: 0px;
+    width: 50%;
 }
 
-.top-item-info {
-    width: 100%;
-    display: flex;
-    text-align: left;
-    padding-top: 5px;
-}
-
-.second-items {
+.login-banner {
     flex: 1 auto;
-    width: 40%;
+    width: 50%;
     background-color: white;
 }
 
@@ -350,7 +340,10 @@ p {
 }
 
 .comments-back {
-    font-weight: bold; font-size: 12px; text-decoration: none; color: black;
+    font-weight: bold;
+    font-size: 12px;
+    text-decoration: none;
+    color: black;
 }
 
 .comments-back:hover {
@@ -386,12 +379,11 @@ p {
 }
 
 .info {
-    background-color: aliceblue;
     padding:25px;
     text-align: left;
     line-height: 1.5em;
     margin-bottom: 40px;
-    background: linear-gradient(black,navy);
+    background-color: black;
     color: white;
 }
 
@@ -545,7 +537,8 @@ p {
     float: right;
     margin-top: -20px;
     margin-right: -15px;
-    font-size: 16px;
+    font-size: 1em;
+    color: rgb(94, 94, 94);
 }
 
 .about {
@@ -571,7 +564,7 @@ p {
     padding: 10px;
     margin-bottom: 20px;
     width: 200px;
-    font-size: 14px;
+    font-size: 1em;
 
 }
 
@@ -596,8 +589,12 @@ p {
     background-color: brown;
 }
 
-.inbox, .comment-box-special {
+.comment-box-special {
     padding-top: 25px;
+}
+
+.inbox {
+    padding: 10px;
 }
 
 .user-controls {
@@ -660,24 +657,25 @@ p {
         width: 100%;
     }
 
-    .top-items {
+    .user-input-page {
         display: block;
         padding: 10px;
-        width: 100%;
+        width: calc(100% - 20px);
+    }
+
+    .login-banner {
+        width: calc(100% - 20px);
+
     }
 
     .login {
-        width: calc(100% - 20px);
-        text-align: center;
+        width: 100%;
+        text-align: left;
         margin-bottom: 10px;
     }
 
     .do-login {
         width: 100%;
-    }
-
-    .second-items {
-        width: calc(100% - 70px);
     }
 
     .our-button {
@@ -714,14 +712,14 @@ p {
         padding: 0px;
         width: calc(100% -  20px);
         text-align: center;
-        background-color: lavender;
+        background-color: ghostwhite;
         padding: 10px;
     }
 
     .sorter-link {
         padding-left: 10px;
         padding-right: 10px;
-        font-size: 16px;
+        font-size: 14px;
     }
 
     .heading-links {
@@ -730,6 +728,7 @@ p {
         width: calc(100% - 20px);
         text-align: center;
         padding: 10px;
+        font-size: 12px;
     }
 
     .heading-links-helper

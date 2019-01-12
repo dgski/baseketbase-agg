@@ -27,8 +27,8 @@
 ; string x-expression -> x-expression
 (define (page r page-title content #:sorter [sorter? #f] #:order [order "hot"])
   (response/xexpr
-   #:preamble #"<!doctype html>"
-   
+   #:preamble #"<!doctype html><meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+
    `(html (head (title ,page-title)
                 (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
           
@@ -153,7 +153,7 @@
         "About"
         `(div ((class "items about"))
               (h3 "About This Site")
-              (p "Basketbase is a link aggregator/simple publishing platform ala Reddit. It is light and simple deploy. It's primary design goal is to be minimalist and an example of timeless design."
+              (p "#.minimal is a link aggregator/simple publishing platform ala Reddit. It is light and simple deploy. It's primary design goal is to be minimalist and an example of timeless design."
                  (br)(br)
                  "Designed and developed by David Gorski."))))
 
