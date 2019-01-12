@@ -55,7 +55,9 @@
 (define (inbox-page r)
   (let* ([user (current-user db r)]
          [uid (user-id user)]
-         [comments (get-inbox-comments db uid)])
+         [comments (get-inbox-comments db uid)]
+         [rendered-comments (render-comments comments #f (if (user-logged-in? db r) user #t) #t)])
+    (see-all-inbox-items db uid)
     (page r
           "inbox"
 
@@ -63,9 +65,7 @@
                 (div ((class "userpage-holder"))
                      (div ((class "inbox"))
                           (h3 "Inbox")
-                          ,@(if (null? comments)
-                                `("No replies yet.")
-                                (render-comments comments #f (if (user-logged-in? db r) user #t) #t))))))))
+                          ,@(if (null? comments) `("No replies yet.") rendered-comments)))))))
               
   
 
@@ -222,5 +222,27 @@
          [why (extract-binding/single 'why bindings)])
   (report-user-db db uid why (current-datetime)))
   (redirect-to "/"))
+
+; consume a reported user and return a x-expression representing it
+; reported -> x-expression
+(define (render-reported-user r)
+  `(tr (td ,(number->string (reported-id r)))
+       (td ,(posix->string (reported-datetime r) DEFAULT_DATETIME_FORMAT))
+       (td ,(number->string (reported-uid r)))
+       (td ((class "why-cell")) ,(reported-why r))))
+
+; consume a request, return page representing list of reported users
+(define (reported-users r)
+  (let ([reports (get-reported-users db)])
+    (response/xexpr
+     #:preamble #"<!doctype html>"
+     `(html
+       (head (title "Reported Users")
+                (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
+       (body (h1 "Reported Users")
+             (table ((class "reports-table"))
+              (tr (th "Report Id") (th "DateTime Reported") (th "User Id") (th "Reason"))
+              ,@(map render-reported-user reports)))))))
+
 
 (provide (all-defined-out))

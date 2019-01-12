@@ -424,8 +424,6 @@
 ; use proper function to alter item vote
 ; string, db, number, number ->
 (define (alter-vote type db id dir)
-
-  (write dir)(newline)
   
   (if (equal? type "post")
       (alter-post-vote db id dir)
@@ -488,13 +486,28 @@
 ; Delete all inbox items from a given user
 ; db, number ->
 (define (delete-inbox-uid-db db uid)
-  (display "DELETING")(newline)
   (query-exec db "DELETE FROM inbox WHERE uid = ?" uid))
+
+
+; reported user convenience struct
+(struct reported (id uid why datetime))
+
+; Consume a vector return a reported struct
+(define (vector->reported v)
+  (reported (vector-ref v 0)
+            (vector-ref v 1)
+            (vector-ref v 2)
+            (vector-ref v 3)))
 
 ; Insert a user report into the database
 ; db, number, string, number ->
 (define (report-user-db db uid why datetime)
   (query-exec db "INSERT INTO reported (uid, why, datetime) VALUES (?,?,?)" uid why datetime))
+
+; Return all the reported users in the database
+; db -> list
+(define (get-reported-users db)
+  (map vector->reported (query-rows db "SELECT * FROM reported ORDER BY id ASC")))
 
 ; # EXPORTS
 (provide (all-defined-out))

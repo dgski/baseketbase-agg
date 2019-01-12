@@ -216,8 +216,6 @@
          [user-link (create-user-link uid)]
          [reply-link (create-reply-link render-reply cid pid)]
          [delete-link (create-delete-link render-reply uid curr-user cid)])
-
-    (write hilight?)(newline)
     
     `(div ((class "comment"))
           (div ((class ,(if hilight? "comment-aligner inbox-unread" "comment-aligner")))

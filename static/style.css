@@ -6,17 +6,15 @@ body {
     width: 100%;
 }
 
+p {
+    line-height: 1.5em;
+}
+
 .heading {
     background-color: white;
     text-align: center;
-    /*
-    position: fixed;
-    padding-bottom: 20px;*/
-
     width: 100%;
     padding-top: 10px;
-
-
 }
 
 .heading-holder {
@@ -168,34 +166,14 @@ body {
     flex: 1 auto;
 }
 
-.content:hover {
-    /*background-color: aliceblue;
-
-    border-color: rgb(133, 140, 172);*/
-
-}
-
 .comments {
     color: rgb(133, 140, 172);
     font-size: 12px;
     display: flex;
     align-items: center;
     justify-content: right;
-    /*
-    border-color: rgb(133, 140, 172);
-    border-style: solid;
-    border-width: 0px;
-    border-top-width: 1px;
-    border-right-width: 1px;
-    border-bottom-width: 1px;
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
-    */
-
     padding-right: 5px;
-
     width: 150px;
-
 }
 
 .comment-container {
@@ -207,24 +185,11 @@ body {
     text-decoration: underline;
 }
 
-
-
 .heat-level {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100px;
-
-    /*
-    border-color: rgb(133, 140, 172);
-    border-style: solid;
-    border-width: 0px;
-    border-top-width: 1px;
-    border-left-width: 1px;
-    border-bottom-width: 1px;
-    border-top-left-radius: 10px;
-    border-bottom-left-radius: 10px;
-    */
 }
 
 .heat-level-cont {
@@ -236,7 +201,6 @@ body {
     font-size: 12px;
     padding-left: 5px;
     color: rgb(133, 140, 172);
-
 }
 
 .top-items-helper {
@@ -247,14 +211,9 @@ body {
 
 .top-items {
     display: flex;
-    /*
-    border-bottom-color: rgba(133, 140, 172, 0.171);
-    border-bottom-width: 1px;
-    border-bottom-style: solid;*/
     padding-top: 35px;
     padding-bottom: 35px;
     font-size: 14px;
-
 }
 
 .top-item {
@@ -279,21 +238,6 @@ body {
     background-color: white;
 }
 
-.main-img {
-    width: 100%;
-}
-
-.img-crop {
-    overflow: hidden;
-    background-color: rgb(21, 34, 75);
-    background: linear-gradient(black,navy);
-    text-align: left;
-    color: white;
-    line-height: 1.5em;
-    font-size: 12px;
-    padding: 15px;
-}
-
 .text-item {
     flex: 1;
     width: 50%;
@@ -314,7 +258,6 @@ body {
     font-family: times;
     font-size: 16px;
     line-height: 1.5em;
-
 }
 
 .comment-link {
@@ -369,7 +312,6 @@ body {
     text-align: right;
 }
 
-
 .comment-body {
     padding-top: 2px;
 }
@@ -389,8 +331,34 @@ body {
     margin-bottom: 20px;
 }
 
+.comment-page {
+    padding-top: 35px;
+    padding-bottom: 35px
+}
+
+.comment-page-helper {
+    padding-top: 50px
+}
+
+.comment-page-more {
+    padding-bottom: 20px;
+    text-align: left;
+}
+
 .comment-aligner:hover {
     background-color:aliceblue;
+}
+
+.comments-back {
+    font-weight: bold; font-size: 12px; text-decoration: none; color: black;
+}
+
+.comments-back:hover {
+    text-decoration: underline;
+}
+
+.comment-input {
+    height: 50px;
 }
 
 .base {
@@ -431,27 +399,6 @@ body {
     text-align: left;
 }
 
-.our-input {
-    padding: 10px;
-    margin-bottom: 20px;
-    width: 200px;
-    font-size: 14px;
-
-}
-
-.our-button {
-    background-color: rgb(133, 140, 172);
-    padding: 12px;
-    color: white;
-    border: none;
-    margin-right: 18px;
-}
-
-.our-button:hover {
-    background-color: black;
-    cursor: pointer;
-}
-
 .submit {
     text-align: left;
     padding-top: 25px;
@@ -468,8 +415,6 @@ body {
     text-align: left;
 }
 
-
-
 .top-text {
     color: black;
     padding: 15px;
@@ -477,8 +422,6 @@ body {
     line-height: 1.5em;
     font-size: 12px;
     background-color: aliceblue;
-    /*background: linear-gradient(rgb(21, 34, 75),rgb(40, 65, 148));*/
-
     height: 100%;
     overflow: hidden;
 }
@@ -489,9 +432,7 @@ body {
     text-align: left;
     line-height: 1.5em;
     font-size: 12px;
-    /*background: linear-gradient(rgb(21, 34, 75),rgb(40, 65, 148));*/
     background-color: rgb(21, 34, 75);
-
     height: 100%;
     overflow: hidden;
 }
@@ -593,14 +534,6 @@ body {
     text-decoration: underline;
 }
 
-.comments-back {
-    font-weight: bold; font-size: 12px; text-decoration: none; color: black;
-}
-
-.comments-back:hover {
-    text-decoration: underline;
-}
-
 .body-box {
     padding: 5px;
     padding-top: 10px;
@@ -634,6 +567,27 @@ body {
     padding: 10px;
 }
 
+.our-input {
+    padding: 10px;
+    margin-bottom: 20px;
+    width: 200px;
+    font-size: 14px;
+
+}
+
+.our-button {
+    background-color: rgb(133, 140, 172);
+    padding: 12px;
+    color: white;
+    border: none;
+    margin-right: 18px;
+}
+
+.our-button:hover {
+    background-color: black;
+    cursor: pointer;
+}
+
 .standard-btn {
     width: 125px;
 }
@@ -644,14 +598,6 @@ body {
 
 .inbox, .comment-box-special {
     padding-top: 25px;
-}
-
-p {
-    line-height: 1.5em;
-}
-
-.comment-input {
-    height: 50px;
 }
 
 .user-controls {
@@ -670,19 +616,27 @@ p {
     float: right;
 }
 
-.comment-page {
-    padding-top: 35px;
-    padding-bottom: 35px
+.reports-table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.comment-page-helper {
-    padding-top: 50px
+.reports-table th {
+    background-color: black;
+    color: white;
+    padding: 10px;
 }
 
-.comment-page-more {
-    padding-bottom: 20px;
+.reports-table td {
+    border-top: 1px solid lightgrey;
+    border-bottom: 1px solid lightgrey;
+    padding: 10px;
+}
+
+.why-cell {
     text-align: left;
 }
+
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 1200px){
 

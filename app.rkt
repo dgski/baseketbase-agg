@@ -76,6 +76,9 @@
    [("report-user" (integer-arg)) (logreq report-user)]
    [("do-report-user" (integer-arg)) (logreq do-report-user)]
 
+   ; Administration
+   [("reported") reported-users]
+   
    ; Utilities
    [("static" (string-arg)) serve-asset]
 
