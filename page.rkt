@@ -29,7 +29,7 @@
   (response/xexpr
    #:preamble #"<!doctype html><meta name='viewport' content='width=device-width, initial-scale=1.0'>"
 
-   `(html (head (title ,page-title)
+   `(html (head (title ,(string-append "#.minimal - " page-title))
                 (link ((rel "stylesheet") (type "text/css") (href "/static/style.css"))))
           
           (body ,(render-according-header db r sorter? order)
@@ -140,7 +140,7 @@
 ; request -> x-expression
 (define (page-not-found r)
   (page r
-        "Not Found"
+        "not found"
         `(div ((class "items"))
           (div ((class "info-page"))
               (h3 "Wrong Turn, Bro!")
@@ -150,7 +150,7 @@
 ; request -> x-expression
 (define (about-page r)
   (page r
-        "About"
+        "about"
         `(div ((class "items about"))
               (h3 "About This Site")
               (p "#.minimal is a link aggregator/simple publishing platform ala Reddit. It is light and simple deploy. It's primary design goal is to be minimalist and an example of timeless design."

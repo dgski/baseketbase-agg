@@ -15,7 +15,7 @@
   (let ([render-reply (user-logged-in? db r)]
         [post (pid->db->post db id)])
     (page r
-          "Post Page"
+          "post"
           `(div ((class "items"))
                 ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
                 ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
@@ -58,7 +58,7 @@
 ; request -> X-expr
 (define (submit-page r)
   (page r
-   "basketbase - Submit Page"
+   "submit page"
    `(div ((class "items about"))
          (div ((class "submit"))
               (form ((action "submit-new-post"))
@@ -240,7 +240,7 @@
   (let* ([bindings (request-bindings r)]
          [pid (extract-binding/single 'pid bindings)]
          [cid (extract-binding/single 'cid bindings)])
-    (page r "Reply to:" `(div ((class "items info-page"))
+    (page r "reply to:" `(div ((class "items info-page"))
                                          (h3 "Replying to:")
                                          ,(render-comment (list (id->db->comment db cid) '()) 0 #f (if (user-logged-in? db r) (current-user db r) #f))
                                          (br)(br)
@@ -297,7 +297,7 @@
   (let* ([currcomm (id->db->comment db cid)]
          [currpost (pid->db->post db (comment-pid currcomm))]
          [render-reply (user-logged-in? db r)])
-    (page r "Comment Page" `(div ((class "items comment-page"))
+    (page r "comment page" `(div ((class "items comment-page"))
                                  ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
                                  (div ((class "comment-page-helper"))
                                       (div ((style "comment-page-more"))

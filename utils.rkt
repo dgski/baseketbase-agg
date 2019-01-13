@@ -3,7 +3,8 @@
 (require gregor
          gregor/period
          web-server/servlet
-         web-server/servlet-env)
+         web-server/servlet-env
+         racket/date)
 
 ; COOKIE UTILITIES
 
@@ -89,6 +90,27 @@
 ; request -> string
 (define (referer-direct r)
   (bytes->string/utf-8 (header-value (headers-assq #"Referer" (request-headers/raw r)))))
+
+; # LOGGING UTILITIES
+
+(define (log-request r curr-dir)
+  (let ([line (format
+               "~s\n"
+               `((time ,(current-seconds))
+                 (client-ip ,(request-client-ip r))
+                 (host-ip ,(request-host-ip r))
+                 (referer
+                  ,(let ([R (headers-assq*
+                             #"Referer"
+                             (request-headers/raw r))])
+                     (if R
+                         (header-value R)
+                         #f)))
+                 (uri ,(url->string (request-uri r)))))])
+    (display line)
+    (display-to-file line
+                    (build-path curr-dir "app.log")
+                     #:exists 'append)))
 
 
 ; # EXPORTS

@@ -344,6 +344,7 @@ p {
     font-size: 12px;
     text-decoration: none;
     color: black;
+    display: inline-block;
 }
 
 .comments-back:hover {

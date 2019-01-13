@@ -3,7 +3,8 @@
 ; # REQUIRE MODULES
 (require web-server/servlet
          web-server/servlet-env
-         racket/port)
+         racket/port
+         web-server/dispatchers/dispatch-log)
 
 ; # REQUIRE LOCAL
 (require "model.rkt"
@@ -16,6 +17,9 @@
 
 ; # SETUP CRYPTOGRAPHY
 (setup-crypto)
+
+; # SAVE CURRENT DIRECTORY
+(define curr-dir (current-directory))
 
 ; # FRONT PAGE
 ; request -> X-expr
@@ -31,7 +35,7 @@
     (page #:order order
           #:sorter #t
           r
-          "basketbase - Front Page"
+          "front Page"
           (render-posts content order start end render-banner?))))
 
 ; # REQUEST DISPATCHING
@@ -39,7 +43,9 @@
 ; Consume request and return the right thing
 ; request -> X-expr
 (define (start r)
-  (dispatch r))
+  (begin
+    (log-request r curr-dir)
+    (dispatch r)))
 
 ; Request dispatching Table
 (define-values (dispatch url)
@@ -85,11 +91,16 @@
    ; Page Not Found
    [else page-not-found]))
 
+
+; Get command line arguments
+(define ip (string->number (vector-ref (current-command-line-arguments) 1)))
+(define port (string->number (vector-ref (current-command-line-arguments) 2)))
+
 ; Start the server
 (serve/servlet start
                #:extra-files-paths (list (build-path (current-directory) "static"))  ; directory for static files
                #:launch-browser? #f
                #:servlet-path "/"
                #:servlet-regexp #rx""
-               #:listen-ip "0.0.0.0"
-               #:port 8080)
+               #:listen-ip ip
+               #:port port)
