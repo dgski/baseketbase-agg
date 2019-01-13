@@ -9,13 +9,19 @@ It is written in Racket, and implements it's own session management service. I t
 To get started generate an SQLite database using the **create-db.rkt** script:
 
 ```
-> racket create-db.rkt
+> racket create-db.rkt <DATABASE_NAME>
+
+Example:
+> racket create-db.rkt database.db
 ```
 
 And then to start the server simply run:
 
 ```
-> racket app.rkt
+> racket app.rkt <DATABASE_NAME> <IP> <PORT>
+
+Example:
+> racket app.rkt database.db 0.0.0.0 8000
 ```
 
 ![Mobile Screenshot](media/screenshot_mobile.png)
