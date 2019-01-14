@@ -9,15 +9,21 @@
          "sessions.rkt"
          "page.rkt")
 
+; Gets the user's vote for post if it exists
+; db, request -> vote | boolean
+(define (get-user-vote-if-logged-in db r post)
+  (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f))
+
 ; consume request and return the post being requested along with comments
 ; request -> x-expression
 (define (post-page r id)
-  (let ([render-reply (user-logged-in? db r)]
-        [post (pid->db->post db id)])
+  (let* ([render-reply (user-logged-in? db r)]
+        [post (pid->db->post db id)]
+        [rendered-post (render-post (cons post (get-user-vote-if-logged-in db r post)))])
     (page r
           "post"
           `(div ((class "items"))
-                ,(render-post (cons post (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id post)) #f)))
+                ,rendered-post
                 ,(if (equal? (post-body post) "") "" `(div ((class "body-box")) ,(post-body post)))
 
                 (div ((class "user-controls"))
@@ -55,7 +61,7 @@
            (redirect-to "/"))))
 
 ; consume request and return the submit page
-; request -> X-expr
+; request -> x-expression
 (define (submit-page r)
   (page r
    "submit page"
@@ -82,7 +88,6 @@
   (post->db db (parse-post (current-user db r) (request-bindings r)))
   (redirect-to "/"))
 
-
 ; welcome banner constant
 ; x-expression representing the welcome banner
 (define WELCOME-BANNER
@@ -91,9 +96,8 @@
         (h3 ((class "welcome-header")) "Welcome to Our Site!")
         "This is a minimal online news aggregator. You can see links that others think are interesting or noteworthy, be part of engaging discussions in the comments section, and submit your own links too!"))
 
-
-; consume a list of items and return X-expr representing it
-; list of item -> X-expr
+; consume a list of items and return x-expression representing it
+; list of item -> x-expression
 (define (render-posts posts order start end [render-banner #t])
   `(div ((class "items"))
         ,(if render-banner WELCOME-BANNER "")
@@ -114,7 +118,6 @@
      (new-vote-func)]
     [(list 0 0)
      (alter-vote type db id "up")]))
-
 
 ; consume type uid id and dir and return a function that will alter that vote
 ; number,number, number, number -> function
@@ -143,13 +146,11 @@
   
     (redirect-to (referer-direct r))))
 
-
 ; consume item p and attach
 ; request -> function
 (define (attach-comments-to-post r)
   (lambda (p)
     (cons p (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id p)) #f))))
-
 
 ; consume item p and return X-expr representing data
 ; format (post vote)
@@ -233,7 +234,6 @@
                `(div ,@(map (lambda (c)
                               (render-comment c (+ 1 depth) render-reply curr-user)) replies))))))
 
-
 ; consume a request, return a page that allows replying to the given comment
 ; request -> x-expression
 (define (reply-comment r)
@@ -255,7 +255,6 @@
                                                (div ((class "reply-box-button"))
                                                     (button ((class "our-button")) "Post")))))))
 
-
 ; consume request, if user is allowed to, delete comment, redirect to front-page
 ; request -> re-direct
 (define (delete-comment r)
@@ -269,8 +268,6 @@
     (begin
       (when (= uid curr-uid) (delete-comment-db db cid))
       (redirect-to dest-url))))
-
-
 
 ; consume request, pid and return the post page (after adding comment)
 ; request -> redirect to "/post/pid"
@@ -300,11 +297,8 @@
     (page r "comment page" `(div ((class "items comment-page"))
                                  ,(render-post (cons currpost (if (user-logged-in? db r) (get-post-vote db (user-id (current-user db r)) (post-id currpost)) #f)))
                                  (div ((class "comment-page-helper"))
-                                      (div ((style "comment-page-more"))
+                                      (div ((class "comment-page-more"))
                                            (a ((class "comments-back") (href ,(string-append "/post/" (number->string (post-id currpost))))) "< back to post"))
                                       ,@(render-comments (list (list currcomm (get-comment-replies db (comment-id currcomm)))) render-reply (if (user-logged-in? db r) (current-user db r) #f)))))))
-
-
-
 
 (provide (all-defined-out))

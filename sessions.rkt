@@ -49,24 +49,28 @@
 (define (parse-session-info r)
   (request-id-cookie "sid" (make-secret-salt/file "salt.key") r))
 
+; consumes a session id and returns whether that session has expired
+; db, request, string -> boolean
+(define (user-session-expired? db r sid)
+  (let ([curr_session (sid->db->session db sid)])
+    (and (equal? (session-ip curr_session) (request-client-ip r))
+         (< (current-datetime) (session-expiry curr_session))
+         (equal? (session-useragent curr_session) (get-user-agent r)))))
+  
 ; consumes request and determines whether request contains valid active session
 ; Checks whether session exists in db, whether it has not expired yet, and whether ip and user-agent match
-; request -> bool
+; request -> boolean
 (define (user-logged-in? db r)
-  (let ([session_id (parse-session-info r)])
-    (and session_id
-         (session-exists? db session_id)
-         ; Check if session is expired
-         (let ([curr_session (sid->db->session db session_id)])
-           (and (equal? (session-ip curr_session) (request-client-ip r))
-                (< (current-datetime) (session-expiry curr_session))
-                (equal? (session-useragent curr_session) (get-user-agent r)))))))
+  (let ([sid (parse-session-info r)])
+    (and sid
+         (session-exists? db sid)
+         (user-session-expired? db r sid))))
 
 ; get the currently logged in user
-; db, r -> user
+; db, request -> user
 (define (current-user db r)
-  (let ([session_id (parse-session-info r)])
-    (id->db->user db (session-uid (sid->db->session db session_id)))))
+  (let ([sid (parse-session-info r)])
+    (id->db->user db (session-uid (sid->db->session db sid)))))
 
 ; consumes sid, uid and request and creates a new session, and adds it to the database
 ; string -> add to database
@@ -81,7 +85,7 @@
 ; request, db -> redirect
 (define (attempt-user-login r)
   (match-let* ([(list username password) (parse-login-info (request-bindings r))]
-              [curr-user (username->db->user db username)])
+               [curr-user (username->db->user db username)])
     (if [and curr-user
              (non-empty-string? password)
              (valid-password? password (user-passhash curr-user))]
@@ -109,19 +113,21 @@
 ; consumes request and tries to delete given user
 ; request -> redirect
 (define (attempt-user-delete r)
-  (match-let* ([(list username password) (parse-login-info (request-bindings r))]
-              [curr-user (current-user db r)]
-              [uid (user-id curr-user)])
+  (let* ([password (extract-binding/single 'password (request-bindings r))]
+         [curr-user (current-user db r)]
+         [uid (user-id curr-user)])
 
-             (if [and curr-user
-                      (non-empty-string? password)
-                      (valid-password? password (user-passhash curr-user))]
-                 (begin (mark-user-deleted-db db uid)
-                        (delete-inbox-uid-db db uid)
-                        (scrub-comments-uid-db db uid)
-                        (scrub-posts-uid-db db uid)
-                        (attempt-user-logout r))
-                 (begin (redirect-to "/"))))) ; TODO
+    (if [and curr-user
+             (non-empty-string? password)
+             (valid-password? password (user-passhash curr-user))]
+                 
+        (begin (mark-user-deleted-db db uid)
+               (delete-inbox-uid-db db uid)
+               (scrub-comments-uid-db db uid)
+               (scrub-posts-uid-db db uid)
+               (attempt-user-logout r))
+                 
+        (begin (redirect-to "/delete-account?message=Password is invalid.")))))
   
 
 ; consumes function and returns wrapping lambda which verifies request contains valid session information before running function

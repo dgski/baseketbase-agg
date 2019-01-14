@@ -351,10 +351,6 @@ p {
     text-decoration: underline;
 }
 
-.comment-input {
-    height: 50px;
-}
-
 .base {
     color: rgb(133, 140, 172);
 }
@@ -460,9 +456,10 @@ p {
 
 .submit-text-area {
     outline: none;
-    height:200px;
     border-color: lightgrey;
     line-height: 1.5em;
+    display: inline-block;
+    width: 100%;
 }
 
 .user-link {
@@ -564,7 +561,6 @@ p {
 .our-input {
     padding: 10px;
     margin-bottom: 20px;
-    width: 200px;
     font-size: 1em;
 
 }
@@ -635,6 +631,10 @@ p {
     text-align: left;
 }
 
+.comment-input {
+    height: 50px;
+    width: calc(100% - 20px);
+}
 
 @media only screen and (max-width: 900px), only screen and (max-device-width: 1200px){
 

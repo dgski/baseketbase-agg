@@ -57,10 +57,11 @@
          [uid (user-id user)]
          [comments (get-inbox-comments db uid)]
          [rendered-comments (render-comments comments #f (if (user-logged-in? db r) user #t) #t)])
+    
     (see-all-inbox-items db uid)
+    
     (page r
           "inbox"
-
           `(div ((class "items"))
                 (div ((class "userpage-holder"))
                      (div ((class "inbox"))
@@ -73,7 +74,7 @@
 ; request -> x-expression
 (define (login-page r)
   (page r
-        "Login"
+        "login"
         '(div ((class "items"))
               (div ((class "user-input-page"))
                    (div ((class "login"))
@@ -110,7 +111,7 @@
                                                  email
                                                  profile
                                                  password
-                                                 0 ))) ;deleted
+                                                 0 ))) ;deleted (0 - not deleted, 1 - deleted)
     (redirect-to "/account")))
 
 ; consume request, return X-expr representing sign-up page
@@ -120,7 +121,7 @@
          [message (check-and-extract-binding 'message bindings)]
          [contents (or message "Sign up today to join our interesting community!")])
     (page r
-          "Sign Up"
+          "sign up"
           `(div ((class "items"))
                 (div ((class "user-input-page"))
                      (div ((class "login"))
@@ -135,16 +136,21 @@
 ; consume request, return page asking whether user wants to delete their account
 ; request -> x-expression
 (define (delete-account r )
-  (let ([u (current-user db r)])
+  (let* ([u (current-user db r)]
+        [bindings (request-bindings r)]
+        [message (check-and-extract-binding 'message bindings)])
     (page r
-          "Delete Account"
+          "delete account"
           `(div ((class "items"))
-                (div ((class "userpage-holder"))
+                (div ((class "account-info"))
                      (h3 ,(string-append "Deleting account '" (user-username u) "'"))
                      (p ((class "our-paragraph"))
                         "Are you sure you want to delete this account?")
+                     (input ((class "our-input") (type "password") (placeholder "password") (name "password")))
+                     (br)
                      (a ((href "/account"))(button ((class "our-button standard-btn")) "no"))
-                     (a ((href "/do-delete-account"))(button ((class "our-button standard-btn danger-btn")) "yes")))))))
+                     (a ((href "/do-delete-account"))(button ((class "our-button standard-btn danger-btn")) "yes"))
+                     ,(if message `(div ((class "info")) ,message) ""))))))
 
 ; consume a database connection and a user id, and return the users most recent comments
 ; db, number -> list
@@ -163,7 +169,7 @@
 ; r -> x-expression
 (define (no-user-page r)
   (page r
-        "User Does Not Exist"
+        "user does not exist"
         `(div ((class "items about"))
               (h1 "User Does Not Exist")
               (p "This user either deleted their account or never existed in the first place!"))))
@@ -178,7 +184,7 @@
     (if (equal? (user-deleted user) 1)
         (no-user-page r)
         (page r
-              "User"
+              (string-append (user-username user) " user page")
               `(div ((class "items"))
                     (div ((class "userpage-holder"))
                      
@@ -203,7 +209,7 @@
 (define (report-user r uid)
   (let ([u (id->db->user db uid)])
   (page r
-        "Reporting User"
+        "reporting user"
         `(div ((class "items about"))
               (h1 ,(string-append "Reporting User '" (user-username u) "'"))
               (p "Please explain below why would like to report this user?")
@@ -232,6 +238,7 @@
        (td ((class "why-cell")) ,(reported-why r))))
 
 ; consume a request, return page representing list of reported users
+; request -> x-expression
 (define (reported-users r)
   (let ([reports (get-reported-users db)])
     (response/xexpr

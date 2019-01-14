@@ -22,7 +22,7 @@
 (define curr-dir (current-directory))
 
 ; # FRONT PAGE
-; request -> X-expr
+; request -> x-expression
 (define (front-page r)
   (let* ([bindings (request-bindings r)]
          [order (or (check-and-extract-binding 'sort bindings) "hot")]
@@ -35,13 +35,13 @@
     (page #:order order
           #:sorter #t
           r
-          "front Page"
+          "front page"
           (render-posts content order start end render-banner?))))
 
 ; # REQUEST DISPATCHING
 
 ; Consume request and return the right thing
-; request -> X-expr
+; request -> x-expression
 (define (start r)
   (begin
     (log-request r curr-dir)
@@ -93,8 +93,17 @@
 
 
 ; Get command line arguments
-(define ip (string->number (vector-ref (current-command-line-arguments) 1)))
-(define port (string->number (vector-ref (current-command-line-arguments) 2)))
+(define args (current-command-line-arguments))
+(when (< (vector-length args) 2)
+  (begin (displayln "Usage: app.rkt <DATABASE_FILE> <IP> <PORT>")
+         (exit)))
+
+; Define Port and Ip
+(define ip (string->number (vector-ref args 1)))
+(define port (string->number (vector-ref args 2)))
+
+; Announce Start of App
+(displayln "Starting App...")
 
 ; Start the server
 (serve/servlet start

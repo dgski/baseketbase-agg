@@ -76,7 +76,7 @@
                        (div ((class "heading-links-helper")) ,@links))))))
 
 ; consume a list and a class type and return an X-expr representing an anchor tag
-; list, string -> X-expr
+; list, string -> x-expression
 (define (create-heading-link lat [css-class "heading-link"])
   `(a ((class ,css-class)
        (href ,(string-append "/" (car lat))))

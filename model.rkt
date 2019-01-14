@@ -227,7 +227,10 @@
 ; Delete comment
 ; cid -> delete from db
 (define (delete-comment-db db cid)
-  (query-exec db "DELETE FROM comments WHERE id = ?" cid))
+  (begin
+    (query-exec db "DELETE FROM comments WHERE id = ?" cid)
+    (query-exec db "DELETE FROM comments WHERE replyto = ?" cid)
+    (query-exec db "DELETE FROM inbox WHERE cid = ?" cid)))
 
 ; Delete all comments with uid
 ; db, uid -> delete from db
@@ -254,6 +257,13 @@
 ; comment -> number
 (define (calc-comment-heat x)
   (* (comment-score (car x)) (expt POST_DECAY_RATE (- (current-datetime) (comment-datetime (car x))))))      
+
+; Get a users most recent comment
+; db, number -> number
+(define (get-most-recent-cid db uid)
+  (let ([v (query-row db "SELECT * FROM comments WHERE uid = ? ORDER BY id DESC LIMIT 1" uid)])
+    (if (null? v) #f (vector-ref v 0))))
+
 
 ; # USERS
 
@@ -429,6 +439,9 @@
       (alter-post-vote db id dir)
       (alter-comm-vote db id dir)))
 
+; creates a new vote in the database based on type
+; string, db, number, number, number ->
+
 (define (create-new-vote type db uid id dir)
   (if (equal? type "post")
       (vote->db db (vote 0 uid id -1 POST dir))
@@ -438,7 +451,6 @@
 ; db,uid -> delete votes
 (define (delete-votes-uid-db db uid)
   (query-exec db "DELETE FROM votes WHERE uid = ?" uid))
-
 
 ; Struct to Conveniently hold Inbox messages
 (struct inbox-msg (id uid cid seen))
@@ -451,12 +463,6 @@
              (vector-ref v 2)
              (vector-ref v 3)))
 
-; Get a users most recent comment
-; db, number -> number
-(define (get-most-recent-cid db uid)
-  (let ([v (query-row db "SELECT * FROM comments WHERE uid = ? ORDER BY id DESC LIMIT 1" uid)])
-    (if (null? v) #f (vector-ref v 0))))
-
 ; Insert Inbox Message Into Database
 ; db, inbox-msg ->
 (define (inbox-msg->db db x)
@@ -468,15 +474,14 @@
 ; Grab a users inbox from the database
 ; db, number -> list
 (define (get-inbox-comments db uid)
-  (~> (query-rows db "SELECT * FROM inbox WHERE uid = ?" uid )
+  (~> (query-rows db "SELECT * FROM inbox WHERE uid = ? ORDER BY id DESC" uid )
       (map (lambda (x) (vector->inbox-msg x)) _)
-      (map (lambda (x) (list (id->db->comment db (inbox-msg-cid x)) '() (= (inbox-msg-seen x) 0))) _)
-      (sort _ (lambda (a b) (> (comment-datetime (car a)) (comment-datetime (car b)))))))
+      (map (lambda (x) (list (id->db->comment db (inbox-msg-cid x)) '() (= (inbox-msg-seen x) 0))) _)))
 
 ; Check if user has any inbox messages waiting for them
 ; db, number -> boolean
 (define (any-inbox-messages? db uid)
-  (not (null? (query-rows db "SELECT * FROM inbox WHERE uid = ? AND seen = 0" uid ))))
+  (not (null? (query-rows db "SELECT * FROM inbox WHERE uid = ? AND seen = 0 LIMIT 1" uid ))))
 
 ; Mark all items in inbox as seen
 ; db, number ->
@@ -488,11 +493,13 @@
 (define (delete-inbox-uid-db db uid)
   (query-exec db "DELETE FROM inbox WHERE uid = ?" uid))
 
+; # REPORTED
 
 ; reported user convenience struct
 (struct reported (id uid why datetime))
 
 ; Consume a vector return a reported struct
+; vector -> reported
 (define (vector->reported v)
   (reported (vector-ref v 0)
             (vector-ref v 1)

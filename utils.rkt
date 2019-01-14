@@ -1,10 +1,10 @@
 #lang racket
 
-(require gregor
+(require racket/date
+         gregor
          gregor/period
          web-server/servlet
-         web-server/servlet-env
-         racket/date)
+         web-server/servlet-env)
 
 ; COOKIE UTILITIES
 
@@ -29,10 +29,7 @@
 (define (list-slice l start [end #f])
   (cond
     [(null? l) '()]
-    [(= start 0)
-     (if end
-         (if (< end (length l)) (take l end) l)
-         l)]
+    [(= start 0) (if end (if (< end (length l)) (take l end) l) l)]
     [else (list-slice (cdr l) (- start 1) (if end (- end 1) end))]))
 
 
@@ -93,24 +90,19 @@
 
 ; # LOGGING UTILITIES
 
+; consumes a request and a path; logs some of it's parameters to stdout and a file
+; request, path ->
 (define (log-request r curr-dir)
-  (let ([line (format
-               "~s\n"
-               `((time ,(current-seconds))
-                 (client-ip ,(request-client-ip r))
-                 (host-ip ,(request-host-ip r))
-                 (referer
-                  ,(let ([R (headers-assq*
-                             #"Referer"
-                             (request-headers/raw r))])
-                     (if R
-                         (header-value R)
-                         #f)))
-                 (uri ,(url->string (request-uri r)))))])
+  (let ([line (format "~s\n"
+                      `((time ,(current-seconds))
+                        (client-ip ,(request-client-ip r))
+                        (host-ip ,(request-host-ip r))
+                        (referer
+                         ,(let ([R (headers-assq* #"Referer" (request-headers/raw r))])
+                            (if R (header-value R) #f)))
+                        (uri ,(url->string (request-uri r)))))])
     (display line)
-    (display-to-file line
-                    (build-path curr-dir "app.log")
-                     #:exists 'append)))
+    (display-to-file line (build-path curr-dir "app.log") #:exists 'append)))
 
 
 ; # EXPORTS
